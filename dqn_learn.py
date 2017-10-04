@@ -239,8 +239,6 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 		epsilon=scheduler.anneal_linear(frames_count)
 		choice = random.uniform(0,1)
 
-		print(curr_state.size())
-
 		# select a random action
 		if choice <= epsilon:
 			action = LongTensor([[random.randrange(num_actions)]])
@@ -283,15 +281,15 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 
 		if done:
 			# epsiodes_durations.append(frames_per_episode)
-			# if episodes_count % 10 == 0:
-			# 	avg_episode_duration = sum(epsiodes_durations)/10.0
-			# 	frames_per_episode_content = 'Episode from', episodes_count-10, ' to ', episodes_count, ' took ', avg_episode_duration, ' frames. '
-			# 	print(frames_per_episode_content)
-			# 	logging.info(frames_per_episode_content)
-			# 	epsiodes_durations = []
+			if episodes_count % 100 == 0:
+				avg_episode_reward = sum(rewards_duration)/100.0
+				avg_reward_content = 'Episode from', episodes_count-99, ' to ', episodes_count, ' has an average of ', avg_episode_duration, ' reward. '
+				print(avg_reward_content)
+				logging.info(avg_reward_content)
+				rewards_duration = []
 			rewards_duration.append(rewards_per_episode)
 			rewards_per_episode_content = 'Episode: ', episodes_count, 'Reward: ', rewards_per_episode
-			print(rewards_per_episode_content)
+			# print(rewards_per_episode_content)
 			logging.info(rewards_per_episode_content)
 			rewards_per_episode = 0
 			frames_per_episode=1
@@ -311,7 +309,7 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 
 		#Run evaluation after each epoch and saved the weights
 		# if frames_count % frames_per_epoch == 0:
-		if episodes_count % 10 == 0:
+		if episodes_count % 1000 == 0:
 			# average_reward, average_action_value = eval_model(env, model, epoch_count, eval_rand_init)
 			# average_action_value = average_action_value.sum()/num_actions
 			# eval_content = 'Average Score for epoch ' + str(epoch_count) + ': ', average_reward
@@ -325,9 +323,9 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 
 		#Print frame count for every 1000000 (one million) frames:
 		if frames_count % 1000000 == 0:
-			training_update = 'frame count: ', frames_count, 'episode count: ', episodes_count
+			training_update = 'frame count: ', frames_count, 'episode count: ', episodes_count, 'epsilon: ', epsilon
 			print(training_update)
-			# logging.info(training_update)
+			logging.info(training_update)
 
 
 
