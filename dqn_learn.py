@@ -74,7 +74,7 @@ def get_screen(env):
 	# curr_state = curr_state / 255
 
 	# return resize(screen).unsqueeze(0).type(Tensor)
-	return screen.unsqueeze(0).type(Tensor)
+	return  torch.from_numpy(screen).unsqueeze(0).type(Tensor)
 
 def preprocessing(current_screen):
 
