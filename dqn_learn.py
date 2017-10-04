@@ -306,16 +306,16 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 		#Run evaluation after each epoch and saved the weights
 		# if frames_count % frames_per_epoch == 0:
 		if episodes_count % 10 == 0:
-			average_reward, average_action_value = eval_model(env, model, epoch_count, eval_rand_init)
-			average_action_value = average_action_value.sum()/num_actions
-			eval_content = 'Average Score for epoch ' + str(epoch_count) + ': ', average_reward
-			average_action_value_content = 'Average Action Value for epoch ' + str(epoch_count) + ': ', average_action_value
-			print(average_action_value_content)
-			print(eval_content)
+			# average_reward, average_action_value = eval_model(env, model, epoch_count, eval_rand_init)
+			# average_action_value = average_action_value.sum()/num_actions
+			# eval_content = 'Average Score for epoch ' + str(epoch_count) + ': ', average_reward
+			# average_action_value_content = 'Average Action Value for epoch ' + str(epoch_count) + ': ', average_action_value
+			# print(average_action_value_content)
+			# print(eval_content)
 			# logging.info(eval_content)
 			# logging.info(average_action_value_content)
-			torch.save(model.state_dict(), './saved_weights/model_weights_'+ str(epoch_count)+'.pth')
-			epoch_count += 1
+			torch.save(model.state_dict(), './saved_weights/model_weights_'+ str(episodes_count)+'.pth')
+			# epoch_count += 1
 
 		#Print frame count for every 1000000 (one million) frames:
 		if frames_count % 1000000 == 0:
