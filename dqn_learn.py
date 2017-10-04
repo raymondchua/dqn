@@ -83,7 +83,7 @@ def preprocessing(current_screen):
 
 	return luminance
 
-def initialize_replay(env, rp_start, rp_size):
+def initialize_replay(env, rp_start, rp_size, num_actions):
 	exp_replay = ExpReplay(rp_size)
 	episodes_count = 0
 	env.reset()
@@ -93,8 +93,8 @@ def initialize_replay(env, rp_start, rp_size):
 		#create current state from observation
 		current_state = get_screen(env)
 
-		action = env.action_space.sample()
-		_, reward, done, _ = env.step(action)
+		action = LongTensor([[random.randrange(num_actions)]])
+		_, reward, done, _ = env.step(action[0,0])
 
 		if not done:
 			next_state = get_screen(env)
@@ -105,7 +105,6 @@ def initialize_replay(env, rp_start, rp_size):
 
 		#clip reward
 		# reward = np.clip(reward, -1, 1)
-		action = LongTensor([[action]])
 		reward = Tensor([reward])
 		# reward = Tensor([reward])
 
@@ -119,9 +118,9 @@ def initialize_replay(env, rp_start, rp_size):
 def compute_y(batch, batch_size, model, target, gamma):
 
 	non_final_mask = ByteTensor(tuple(map(lambda s: s is not None, batch.next_state))) #to get a boolean value of 1 if not final 
-	non_final_next_states = Variable(torch.cat([s for s in batch.next_state if s is not None]), volatile=True).type(Tensor)
+	non_final_next_states = Variable(torch.cat([s for s in batch.next_state if s is not None]), volatile=True)
 
-	state_batch = Variable(torch.cat(batch.state).type(Tensor)) #use cat to change data from tuple to tensor
+	state_batch = Variable(torch.cat(batch.state)) #use cat to change data from tuple to tensor
 	reward_batch = Variable(torch.cat(batch.reward)) 
 	action_batch = Variable(torch.cat(batch.action))
 
@@ -206,10 +205,10 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 	gym.undo_logger_setup()
 	logging.basicConfig(filename='training.log',level=logging.INFO)
 
-	observation = env.reset()
-	exp_replay = initialize_replay(env, rp_start, rp_size)
-
 	num_actions = env.action_space.n
+	exp_replay = initialize_replay(env, rp_start, rp_size, num_actions)
+
+	
 
 	print('No. of actions: ', num_actions)
 
