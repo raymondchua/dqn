@@ -56,7 +56,7 @@ def get_screen(env):
 
 	curr_state = curr_state / 255
 
-	return torch.from_numpy(curr_state).unsqueeze(0)
+	return torch.from_numpy(curr_state).unsqueeze(0).type(Tensor)
 
 def preprocessing(current_screen):
 
@@ -252,9 +252,10 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 		# reward = Tensor([reward]).clamp(-1,1)
 		rewards_per_episode += reward
 		reward = Tensor([reward])
-		
 
 		exp_replay.push(curr_state, action, reward, next_state)
+
+		curr_state = next_state
 
 		#sample random mini-batch
 		obs_sample = exp_replay.sample(batch_size)
