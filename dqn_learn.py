@@ -250,8 +250,9 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 			next_state = None
 
 		# reward = Tensor([reward]).clamp(-1,1)
-		reward = Tensor([reward])
 		rewards_per_episode += reward
+		reward = Tensor([reward])
+		
 
 		exp_replay.push(curr_state, action, reward, next_state)
 
@@ -283,7 +284,9 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 			# 	logging.info(frames_per_episode_content)
 			# 	epsiodes_durations = []
 			rewards_duration.append(rewards_per_episode)
-			print('Episode: ', episodes_count, 'Reward: ', rewards_per_episode)
+			rewards_per_episode_content = 'Episode: ', episodes_count, 'Reward: ', rewards_per_episode
+			print(rewards_per_episode_content)
+			logging.info(rewards_per_episode_content)
 			rewards_per_episode = 0
 			frames_per_episode=1
 			episodes_count+=1
@@ -301,8 +304,8 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 
 
 		#Run evaluation after each epoch and saved the weights
-		if frames_count % frames_per_epoch == 0:
-		# if episodes_count % 10 == 0:
+		# if frames_count % frames_per_epoch == 0:
+		if episodes_count % 10 == 0:
 			average_reward, average_action_value = eval_model(env, model, epoch_count, eval_rand_init)
 			average_action_value = average_action_value.sum()/num_actions
 			eval_content = 'Average Score for epoch ' + str(epoch_count) + ': ', average_reward
