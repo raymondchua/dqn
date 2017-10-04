@@ -239,6 +239,8 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 		epsilon=scheduler.anneal_linear(frames_count)
 		choice = random.uniform(0,1)
 
+		print(curr_state.size())
+
 		# select a random action
 		if choice <= epsilon:
 			action = LongTensor([[random.randrange(num_actions)]])
