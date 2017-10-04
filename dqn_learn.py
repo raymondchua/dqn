@@ -47,16 +47,21 @@ NO_OP_ACTION = 0
 
 def get_screen(env):
 
-	curr_state = np.zeros((4,84,84))
+	# curr_state = np.zeros((4,84,84))
 
-	for i in range(4):
-		screen = env.render(mode='rgb_array')
-		screen = preprocessing(screen)
-		curr_state[i,:,:] = screen
+	screen = env.render(mode='rgb_array')
+	screen = preprocessing(screen)
+	screen = np.expand_dims(screen, 0)
+	# curr_state[i,:,:] = screen
 
-	curr_state = curr_state / 255
+	# for i in range(4):
+	# 	screen = env.render(mode='rgb_array')
+	# 	screen = preprocessing(screen)
+	# 	curr_state[i,:,:] = screen
 
-	return torch.from_numpy(curr_state).unsqueeze(0).type(Tensor)
+	# curr_state = curr_state / 255
+
+	return torch.from_numpy(screen).unsqueeze(0)
 
 def preprocessing(current_screen):
 
@@ -222,7 +227,6 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 	rewards_duration = []
 
 	env.reset()
-	curr_state = get_screen(env)
 
 	eval_rand_init = np.random.randint(NO_OP_MAX, size=NUM_GAMES)
 	print(eval_rand_init)
@@ -231,6 +235,7 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 
 	while True:
 
+		curr_state = get_screen(env)
 		epsilon=scheduler.anneal_linear(frames_count)
 		choice = random.uniform(0,1)
 
@@ -254,8 +259,6 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 		reward = Tensor([reward])
 
 		exp_replay.push(curr_state, action, reward, next_state)
-
-		curr_state = next_state
 
 		#sample random mini-batch
 		obs_sample = exp_replay.sample(batch_size)
