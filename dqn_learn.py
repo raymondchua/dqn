@@ -45,13 +45,21 @@ NO_OP_ACTION = 0
 
 # MAX_FRAMES_PER_GAME = 50000
 
+resize = T.Compose([T.ToPILImage(),
+					T.Scale((84,110), interpolation=Image.BILINEAR),
+					T.ToTensor()])
+
 def get_screen(env):
 
 	# curr_state = np.zeros((4,84,84))
 
-	screen = env.render(mode='rgb_array')
-	screen = preprocessing(screen)
-	screen = np.expand_dims(screen, 0)
+	screen = env.render(mode='rgb_array').transpose((2, 0, 1))
+	
+	screen = screen[:,26:,:]
+	screen = np.ascontiguousarray(screen, dtype=np.float32) / 255
+	screen = torch.from_numpy(screen)
+	# screen = preprocessing(screen)
+	# screen = np.expand_dims(screen, 0)
 	# curr_state[i,:,:] = screen
 
 	# for i in range(4):
@@ -61,7 +69,7 @@ def get_screen(env):
 
 	# curr_state = curr_state / 255
 
-	return torch.from_numpy(screen).unsqueeze(0)
+	return resize(screen).unsqueeze(0).type(Tensor)
 
 def preprocessing(current_screen):
 
@@ -76,7 +84,7 @@ def preprocessing(current_screen):
 def initialize_replay(env, rp_start, rp_size):
 	exp_replay = ExpReplay(rp_size)
 	episodes_count = 0
-	observation = env.reset()
+	env.reset()
 
 	while episodes_count < rp_start:
 
@@ -91,7 +99,7 @@ def initialize_replay(env, rp_start, rp_size):
 
 		else:
 			next_state = None
-			observation = env.reset()
+			env.reset()
 
 		#clip reward
 		# reward = np.clip(reward, -1, 1)
@@ -200,6 +208,8 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 
 	num_actions = env.action_space.n
 
+	print('No. of actions: ', num_actions)
+
 	# initialize action value and target network with the same weights
 	model = DQN(num_actions, use_bn=False)
 	target = DQN(num_actions, use_bn=False)
@@ -254,6 +264,7 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 		else:
 			next_state = None
 
+
 		# reward = Tensor([reward]).clamp(-1,1)
 		rewards_per_episode += reward
 		reward = Tensor([reward])
@@ -271,8 +282,9 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 
 
 		for param in model.parameters():
-			if param.grad is not None:
-				param.grad.data.clamp_(-1,1)
+			param.grad.data.clamp_(-1,1)
+			# if param.grad is not None:
+			# 	param.grad.data.clamp_(-1,1)
 
 		optimizer.step()
 
@@ -283,7 +295,7 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 			# epsiodes_durations.append(frames_per_episode)
 			if episodes_count % 100 == 0:
 				avg_episode_reward = sum(rewards_duration)/100.0
-				avg_reward_content = 'Episode from', episodes_count-99, ' to ', episodes_count, ' has an average of ', avg_episode_duration, ' reward. '
+				avg_reward_content = 'Episode from', episodes_count-99, ' to ', episodes_count, ' has an average of ', avg_episode_reward, ' reward. '
 				print(avg_reward_content)
 				logging.info(avg_reward_content)
 				rewards_duration = []
