@@ -23,6 +23,8 @@ from replay_memory import ExpReplay, Experience
 from dqn_model import DQN
 from util import Scheduler
 
+import time
+
 #(BCHW)
 
 Optimizer = namedtuple("Optimizer", ["type", "kwargs"])
@@ -38,7 +40,7 @@ Tensor = FloatTensor
 #Hyperparameters for validation
 NUM_GAMES = 30
 MAX_FRAMES_PER_GAME = 520000
-NO_OP_MAX = 8 #30 frames but since the frames are skipped randomly between 1 and 4
+NO_OP_MAX = 3 #12 frames but since the frames are skipped randomly between 1 and 4
 NO_OP_ACTION = 0
 
 # MAX_FRAMES_PER_GAME = 50000
@@ -89,7 +91,7 @@ def initialize_replay(env, rp_start, rp_size):
 		#clip reward
 		# reward = np.clip(reward, -1, 1)
 		action = LongTensor([[action]])
-		reward = Tensor([reward]).clamp(-1,1)
+		reward = Tensor([reward])
 		# reward = Tensor([reward])
 
 		exp_replay.push(current_state, action, reward, next_state)
@@ -137,8 +139,8 @@ def eval_model(env, model, epoch_count, eval_rand_init):
 		for frame in range(MAX_FRAMES_PER_GAME):
 
 			# different initial condition
-			for no_op in range(eval_rand_init[i]):
-				env.step(NO_OP_ACTION)
+			# for no_op in range(eval_rand_init[i]):
+			# 	env.step(NO_OP_ACTION)
 
 			eval_choice = random.uniform(0,1)
 			curr_state = get_screen(env)
@@ -216,12 +218,14 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 	epoch_count = 1
 	frames_per_episode = 1
 	epsiodes_durations = []
+	rewards_per_episode = 0
+	rewards_duration = []
 
 	env.reset()
 	curr_state = get_screen(env)
 
 	eval_rand_init = np.random.randint(NO_OP_MAX, size=NUM_GAMES)
-
+	print(eval_rand_init)
 
 	print('Starting training...')
 
@@ -245,8 +249,9 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 		else:
 			next_state = None
 
-		reward = Tensor([reward]).clamp(-1,1)
-		# reward = Tensor([reward])
+		# reward = Tensor([reward]).clamp(-1,1)
+		reward = Tensor([reward])
+		rewards_per_episode += reward
 
 		exp_replay.push(curr_state, action, reward, next_state)
 
@@ -277,6 +282,9 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 			# 	print(frames_per_episode_content)
 			# 	logging.info(frames_per_episode_content)
 			# 	epsiodes_durations = []
+			rewards_duration.append(rewards_per_episode)
+			print('Episode: ', episodes_count, 'Reward: ', rewards_per_episode)
+			rewards_per_episode = 0
 			frames_per_episode=1
 			episodes_count+=1
 			env.reset()
@@ -301,8 +309,8 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 			average_action_value_content = 'Average Action Value for epoch ' + str(epoch_count) + ': ', average_action_value
 			print(average_action_value_content)
 			print(eval_content)
-			logging.info(eval_content)
-			logging.info(average_action_value_content)
+			# logging.info(eval_content)
+			# logging.info(average_action_value_content)
 			torch.save(model.state_dict(), './saved_weights/model_weights_'+ str(epoch_count)+'.pth')
 			epoch_count += 1
 
@@ -310,7 +318,7 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 		if frames_count % 1000000 == 0:
 			training_update = 'frame count: ', frames_count, 'episode count: ', episodes_count
 			print(training_update)
-			logging.info(training_update)
+			# logging.info(training_update)
 
 
 
