@@ -141,8 +141,7 @@ def compute_y(batch, batch_size, model, target, gamma):
 	loss = F.smooth_l1_loss(state_action_values, y_output)
 
 	return loss
-
-
+	
 def eval_model(env, model, epoch_count, eval_rand_init):
 	eval_epsilon = 0.05
 	num_actions = env.action_space.n
