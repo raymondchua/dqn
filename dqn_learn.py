@@ -55,13 +55,15 @@ def get_screen(env):
 
 	# curr_state = np.zeros((4,84,84))
 
-	screen = env.render(mode='rgb_array').transpose((2, 0, 1))
+	# screen = env.render(mode='rgb_array').transpose((2, 0, 1))
 	
-	screen = screen[:,26:,:]
-	screen = np.ascontiguousarray(screen, dtype=np.float32) / 255
-	screen = torch.from_numpy(screen)
-	# screen = preprocessing(screen)
-	# screen = np.expand_dims(screen, 0)
+	# screen = screen[:,26:,:]
+	# screen = np.ascontiguousarray(screen, dtype=np.float32) / 255
+	# screen = torch.from_numpy(screen)
+
+	screen = env.render(mode='rgb_array')
+	screen = preprocessing(screen)
+	screen = np.expand_dims(screen, 0)
 	# curr_state[i,:,:] = screen
 
 	# for i in range(4):
@@ -71,7 +73,8 @@ def get_screen(env):
 
 	# curr_state = curr_state / 255
 
-	return resize(screen).unsqueeze(0).type(Tensor)
+	# return resize(screen).unsqueeze(0).type(Tensor)
+	return screen.unsqueeze(0).type(Tensor)
 
 def preprocessing(current_screen):
 
@@ -286,61 +289,59 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 
 			for param in model.parameters():
 				param.grad.data.clamp_(-1,1)
-				# if param.grad is not None:
-				# 	param.grad.data.clamp_(-1,1)
 
 			optimizer.step()
 
-		# frames_count+= 1
-		# frames_per_episode+= 1
+		frames_count+= 1
+		frames_per_episode+= 1
 
-		# if done:
-		# 	# epsiodes_durations.append(frames_per_episode)
-		# 	if episodes_count % 100 == 0:
-		# 		avg_episode_reward = sum(rewards_duration)/100.0
-		# 		avg_reward_content = 'Episode from', episodes_count-99, ' to ', episodes_count, ' has an average of ', avg_episode_reward, ' reward. '
-		# 		print(avg_reward_content)
-		# 		logging.info(avg_reward_content)
-		# 		rewards_duration = []
-		# 	rewards_duration.append(rewards_per_episode)
-		# 	rewards_per_episode_content = 'Episode: ', episodes_count, 'Reward: ', rewards_per_episode
-		# 	# print(rewards_per_episode_content)
-		# 	logging.info(rewards_per_episode_content)
-		# 	rewards_per_episode = 0
-		# 	frames_per_episode=1
-		# 	episodes_count+=1
-		# 	env.reset()
+		if done:
+			# epsiodes_durations.append(frames_per_episode)
+			if episodes_count % 100 == 0:
+				avg_episode_reward = sum(rewards_duration)/100.0
+				avg_reward_content = 'Episode from', episodes_count-99, ' to ', episodes_count, ' has an average of ', avg_episode_reward, ' reward. '
+				print(avg_reward_content)
+				logging.info(avg_reward_content)
+				rewards_duration = []
+			rewards_duration.append(rewards_per_episode)
+			rewards_per_episode_content = 'Episode: ', episodes_count, 'Reward: ', rewards_per_episode
+			# print(rewards_per_episode_content)
+			logging.info(rewards_per_episode_content)
+			rewards_per_episode = 0
+			frames_per_episode=1
+			episodes_count+=1
+			env.reset()
 
-		# #update weights of target network for every TARGET_UPDATE_FREQ steps
-		# if frames_count % target_update_steps == 0:
-		# 	target.load_state_dict(model.state_dict())
-		# 	# print('weights updated at frame no. ', frames_count)
+		#update weights of target network for every TARGET_UPDATE_FREQ steps
+		if frames_count % target_update_steps == 0:
+			target.load_state_dict(model.state_dict())
+			# print('weights updated at frame no. ', frames_count)
 
-		# #save weights of model for every 100000 frames_count:
-		# # if frames_count % 1000000 == 0:
-		# # 	torch.save(model.state_dict(), './saved_weights/model_weights_'+ str(frames_count)+'.pth')
-		# # 	print('weights saved at episode: ', episodes_count)
-
-
-		# #Run evaluation after each epoch and saved the weights
-		# # if frames_count % frames_per_epoch == 0:
-		# if episodes_count % 1000 == 0:
-		# 	# average_reward, average_action_value = eval_model(env, model, epoch_count, eval_rand_init)
-		# 	# average_action_value = average_action_value.sum()/num_actions
-		# 	# eval_content = 'Average Score for epoch ' + str(epoch_count) + ': ', average_reward
-		# 	# average_action_value_content = 'Average Action Value for epoch ' + str(epoch_count) + ': ', average_action_value
-		# 	# print(average_action_value_content)
-		# 	# print(eval_content)
-		# 	# logging.info(eval_content)
-		# 	# logging.info(average_action_value_content)
-		# 	torch.save(model.state_dict(), './saved_weights/model_weights_'+ str(episodes_count)+'.pth')
-		# 	# epoch_count += 1
-
-		# #Print frame count for every 1000000 (one million) frames:
+		#save weights of model for every 100000 frames_count:
 		# if frames_count % 1000000 == 0:
-		# 	training_update = 'frame count: ', frames_count, 'episode count: ', episodes_count, 'epsilon: ', epsilon
-		# 	print(training_update)
-		# 	logging.info(training_update)
+		# 	torch.save(model.state_dict(), './saved_weights/model_weights_'+ str(frames_count)+'.pth')
+		# 	print('weights saved at episode: ', episodes_count)
+
+
+		#Run evaluation after each epoch and saved the weights
+		# if frames_count % frames_per_epoch == 0:
+		if episodes_count % 1000 == 0:
+			# average_reward, average_action_value = eval_model(env, model, epoch_count, eval_rand_init)
+			# average_action_value = average_action_value.sum()/num_actions
+			# eval_content = 'Average Score for epoch ' + str(epoch_count) + ': ', average_reward
+			# average_action_value_content = 'Average Action Value for epoch ' + str(epoch_count) + ': ', average_action_value
+			# print(average_action_value_content)
+			# print(eval_content)
+			# logging.info(eval_content)
+			# logging.info(average_action_value_content)
+			torch.save(model.state_dict(), './saved_weights/model_weights_'+ str(episodes_count)+'.pth')
+			# epoch_count += 1
+
+		#Print frame count for every 1000000 (one million) frames:
+		if frames_count % 1000000 == 0:
+			training_update = 'frame count: ', frames_count, 'episode count: ', episodes_count, 'epsilon: ', epsilon
+			print(training_update)
+			logging.info(training_update)
 
 
 
