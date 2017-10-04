@@ -18,10 +18,12 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.autograd import Variable
 import torchvision.transforms as T
+from PIL import Image
 
 from replay_memory import ExpReplay, Experience
 from dqn_model import DQN
 from util import Scheduler
+
 
 import time
 
@@ -137,6 +139,7 @@ def compute_y(batch, batch_size, model, target, gamma):
 	loss = F.smooth_l1_loss(state_action_values, y_output)
 
 	return loss
+
 
 def eval_model(env, model, epoch_count, eval_rand_init):
 	eval_epsilon = 0.05
@@ -264,7 +267,6 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 		else:
 			next_state = None
 
-
 		# reward = Tensor([reward]).clamp(-1,1)
 		rewards_per_episode += reward
 		reward = Tensor([reward])
@@ -273,71 +275,73 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 
 		#sample random mini-batch
 		obs_sample = exp_replay.sample(batch_size)
+
 		batch = Experience(*zip(*obs_sample)) #unpack the batch into states, actions, rewards and next_states
 
 		#compute y 
-		loss = compute_y(batch, batch_size, model, target, gamma)
-		optimizer.zero_grad()
-		loss.backward()
+		if len(exp_replay) >= batch_size:
+			
+			loss = compute_y(batch, batch_size, model, target, gamma)
+			optimizer.zero_grad()
+			loss.backward()
+
+			for param in model.parameters():
+				param.grad.data.clamp_(-1,1)
+				# if param.grad is not None:
+				# 	param.grad.data.clamp_(-1,1)
+
+			optimizer.step()
+
+		# frames_count+= 1
+		# frames_per_episode+= 1
+
+		# if done:
+		# 	# epsiodes_durations.append(frames_per_episode)
+		# 	if episodes_count % 100 == 0:
+		# 		avg_episode_reward = sum(rewards_duration)/100.0
+		# 		avg_reward_content = 'Episode from', episodes_count-99, ' to ', episodes_count, ' has an average of ', avg_episode_reward, ' reward. '
+		# 		print(avg_reward_content)
+		# 		logging.info(avg_reward_content)
+		# 		rewards_duration = []
+		# 	rewards_duration.append(rewards_per_episode)
+		# 	rewards_per_episode_content = 'Episode: ', episodes_count, 'Reward: ', rewards_per_episode
+		# 	# print(rewards_per_episode_content)
+		# 	logging.info(rewards_per_episode_content)
+		# 	rewards_per_episode = 0
+		# 	frames_per_episode=1
+		# 	episodes_count+=1
+		# 	env.reset()
+
+		# #update weights of target network for every TARGET_UPDATE_FREQ steps
+		# if frames_count % target_update_steps == 0:
+		# 	target.load_state_dict(model.state_dict())
+		# 	# print('weights updated at frame no. ', frames_count)
+
+		# #save weights of model for every 100000 frames_count:
+		# # if frames_count % 1000000 == 0:
+		# # 	torch.save(model.state_dict(), './saved_weights/model_weights_'+ str(frames_count)+'.pth')
+		# # 	print('weights saved at episode: ', episodes_count)
 
 
-		for param in model.parameters():
-			param.grad.data.clamp_(-1,1)
-			# if param.grad is not None:
-			# 	param.grad.data.clamp_(-1,1)
+		# #Run evaluation after each epoch and saved the weights
+		# # if frames_count % frames_per_epoch == 0:
+		# if episodes_count % 1000 == 0:
+		# 	# average_reward, average_action_value = eval_model(env, model, epoch_count, eval_rand_init)
+		# 	# average_action_value = average_action_value.sum()/num_actions
+		# 	# eval_content = 'Average Score for epoch ' + str(epoch_count) + ': ', average_reward
+		# 	# average_action_value_content = 'Average Action Value for epoch ' + str(epoch_count) + ': ', average_action_value
+		# 	# print(average_action_value_content)
+		# 	# print(eval_content)
+		# 	# logging.info(eval_content)
+		# 	# logging.info(average_action_value_content)
+		# 	torch.save(model.state_dict(), './saved_weights/model_weights_'+ str(episodes_count)+'.pth')
+		# 	# epoch_count += 1
 
-		optimizer.step()
-
-		frames_count+= 1
-		frames_per_episode+= 1
-
-		if done:
-			# epsiodes_durations.append(frames_per_episode)
-			if episodes_count % 100 == 0:
-				avg_episode_reward = sum(rewards_duration)/100.0
-				avg_reward_content = 'Episode from', episodes_count-99, ' to ', episodes_count, ' has an average of ', avg_episode_reward, ' reward. '
-				print(avg_reward_content)
-				logging.info(avg_reward_content)
-				rewards_duration = []
-			rewards_duration.append(rewards_per_episode)
-			rewards_per_episode_content = 'Episode: ', episodes_count, 'Reward: ', rewards_per_episode
-			# print(rewards_per_episode_content)
-			logging.info(rewards_per_episode_content)
-			rewards_per_episode = 0
-			frames_per_episode=1
-			episodes_count+=1
-			env.reset()
-
-		#update weights of target network for every TARGET_UPDATE_FREQ steps
-		if frames_count % target_update_steps == 0:
-			target.load_state_dict(model.state_dict())
-			# print('weights updated at frame no. ', frames_count)
-
-		#save weights of model for every 100000 frames_count:
+		# #Print frame count for every 1000000 (one million) frames:
 		# if frames_count % 1000000 == 0:
-		# 	torch.save(model.state_dict(), './saved_weights/model_weights_'+ str(frames_count)+'.pth')
-		# 	print('weights saved at episode: ', episodes_count)
-
-
-		#Run evaluation after each epoch and saved the weights
-		# if frames_count % frames_per_epoch == 0:
-		if episodes_count % 1000 == 0:
-			# average_reward, average_action_value = eval_model(env, model, epoch_count, eval_rand_init)
-			# average_action_value = average_action_value.sum()/num_actions
-			# eval_content = 'Average Score for epoch ' + str(epoch_count) + ': ', average_reward
-			# average_action_value_content = 'Average Action Value for epoch ' + str(epoch_count) + ': ', average_action_value
-			# print(average_action_value_content)
-			# print(eval_content)
-			# logging.info(eval_content)
-			# logging.info(average_action_value_content)
-			torch.save(model.state_dict(), './saved_weights/model_weights_'+ str(episodes_count)+'.pth')
-			# epoch_count += 1
-
-		#Print frame count for every 1000000 (one million) frames:
-		if frames_count % 1000000 == 0:
-			training_update = 'frame count: ', frames_count, 'episode count: ', episodes_count, 'epsilon: ', epsilon
-			print(training_update)
-			logging.info(training_update)
+		# 	training_update = 'frame count: ', frames_count, 'episode count: ', episodes_count, 'epsilon: ', epsilon
+		# 	print(training_update)
+		# 	logging.info(training_update)
 
 
 
