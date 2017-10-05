@@ -141,7 +141,7 @@ def compute_y(batch, batch_size, model, target, gamma):
 	loss = F.smooth_l1_loss(state_action_values, y_output)
 
 	return loss
-	
+
 def eval_model(env, model, epoch_count, eval_rand_init):
 	eval_epsilon = 0.05
 	num_actions = env.action_space.n
@@ -296,20 +296,20 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 
 		if done:
 			# epsiodes_durations.append(frames_per_episode)
+			rewards_duration.append(rewards_per_episode)
+			# rewards_per_episode_content = 'Episode: ', episodes_count, 'Reward: ', rewards_per_episode
+			# logging.info(rewards_per_episode_content)
+			rewards_per_episode = 0
+			frames_per_episode=1
+			episodes_count+=1
+			env.reset()
+
 			if episodes_count % 100 == 0:
 				avg_episode_reward = sum(rewards_duration)/100.0
 				avg_reward_content = 'Episode from', episodes_count-99, ' to ', episodes_count, ' has an average of ', avg_episode_reward, ' reward. '
 				print(avg_reward_content)
 				logging.info(avg_reward_content)
 				rewards_duration = []
-			rewards_duration.append(rewards_per_episode)
-			rewards_per_episode_content = 'Episode: ', episodes_count, 'Reward: ', rewards_per_episode
-			# print(rewards_per_episode_content)
-			logging.info(rewards_per_episode_content)
-			rewards_per_episode = 0
-			frames_per_episode=1
-			episodes_count+=1
-			env.reset()
 
 		#update weights of target network for every TARGET_UPDATE_FREQ steps
 		if frames_count % target_update_steps == 0:
