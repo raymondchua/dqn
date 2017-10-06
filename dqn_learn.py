@@ -2,6 +2,8 @@ from __future__ import print_function, division
 
 import cv2
 import gym
+from gym import wrappers
+
 import math
 import random
 import numpy as np
@@ -11,6 +13,7 @@ from collections import namedtuple
 from itertools import count
 from copy import deepcopy
 import logging
+import sys
 
 import torch
 import torch.nn as nn
@@ -51,6 +54,8 @@ resize = T.Compose([T.ToPILImage(),
 					T.Scale((84,110), interpolation=Image.BILINEAR),
 					T.ToTensor()])
 
+# count = 0
+
 def get_screen(env):
 
 	# curr_state = np.zeros((4,84,84))
@@ -78,11 +83,16 @@ def get_screen(env):
 
 def preprocessing(current_screen):
 
+	# global count
+
 	current_screen_yuv = cv2.cvtColor(current_screen, cv2.COLOR_BGR2YUV)
 	current_y, current_u, current_v = cv2.split(current_screen_yuv) #image size 210 x 160
 
 	luminance = cv2.resize(current_y, (84,110)) #resize to 110 x 84
 	luminance = luminance[26:,:] #remove the score
+
+	# cv2.imwrite('./images/image_'+str(count)+'.png',luminance)
+	# count+= 1
 
 	return luminance
 
@@ -131,7 +141,7 @@ def compute_y(batch, batch_size, model, target, gamma):
 	state_action_values = model(state_batch).gather(1,action_batch)
 
 	next_state_action_values = Variable(torch.zeros(batch_size)).type(Tensor)
-	next_state_action_values[non_final_mask] = target(non_final_next_states).max(1)[0]
+	next_state_action_values[non_final_mask] = model(non_final_next_states).max(1)[0]
 
 	next_state_action_values.volatile = False
 
@@ -206,20 +216,17 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 	
 	gym.undo_logger_setup()
 	logging.basicConfig(filename='neg_training.log',level=logging.INFO)
-
 	num_actions = env.action_space.n
-	exp_replay = initialize_replay(env, rp_start, rp_size, num_actions)
-
 	
-
+	exp_replay = initialize_replay(env, rp_start, rp_size, num_actions)
 	print('No. of actions: ', num_actions)
 
 	# initialize action value and target network with the same weights
 	model = DQN(num_actions, use_bn=False)
-	target = DQN(num_actions, use_bn=False)
+	# target = DQN(num_actions, use_bn=False)
 
-	# model.load_state_dict(torch.load('./saved_weights/model_weights_10000.pth'))
-	target.load_state_dict(model.state_dict())
+	model.load_state_dict(torch.load('./saved_weights/neg_model_weights_6000.pth'))
+	# target.load_state_dict(model.state_dict())
 
 	print('weights loaded...')
 
@@ -242,8 +249,8 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 
 	env.reset()
 
-	eval_rand_init = np.random.randint(NO_OP_MAX, size=NUM_GAMES)
-	print(eval_rand_init)
+	# eval_rand_init = np.random.randint(NO_OP_MAX, size=NUM_GAMES)
+	# print(eval_rand_init)
 
 	print('Starting training...')
 
@@ -261,8 +268,6 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 			action = get_greedy_action(model, curr_state)
 
 		_, reward, done, _ = env.step(action[0,0])
-
-
 
 		if not done:
 			next_state = get_screen(env)
@@ -319,8 +324,8 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 				rewards_duration = []
 
 		#update weights of target network for every TARGET_UPDATE_FREQ steps
-		if frames_count % target_update_steps == 0:
-			target.load_state_dict(model.state_dict())
+		# if frames_count % target_update_steps == 0:
+		# 	target.load_state_dict(model.state_dict())
 			# print('weights updated at frame no. ', frames_count)
 
 		#save weights of model for every 100000 frames_count:
