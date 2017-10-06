@@ -205,7 +205,7 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 	exp_frame=1000, exp_initial=1, exp_final=0.1, gamma=0.99, target_update_steps=1000, frames_per_epoch=10000):
 	
 	gym.undo_logger_setup()
-	logging.basicConfig(filename='training.log',level=logging.INFO)
+	logging.basicConfig(filename='neg_training.log',level=logging.INFO)
 
 	num_actions = env.action_space.n
 	exp_replay = initialize_replay(env, rp_start, rp_size, num_actions)
@@ -262,14 +262,21 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 
 		_, reward, done, _ = env.step(action[0,0])
 
+
+
 		if not done:
 			next_state = get_screen(env)
 
 		else:
 			next_state = None
 
+
 		# reward = Tensor([reward]).clamp(-1,1)
 		rewards_per_episode += reward
+
+		if reward == 0:
+			reward = -1
+
 		reward = Tensor([reward])
 
 		exp_replay.push(curr_state, action, reward, next_state)
@@ -333,7 +340,7 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 			# print(eval_content)
 			# logging.info(eval_content)
 			# logging.info(average_action_value_content)
-			torch.save(model.state_dict(), './saved_weights/model_weights_'+ str(episodes_count)+'.pth')
+			torch.save(model.state_dict(), './saved_weights/neg_model_weights_'+ str(episodes_count)+'.pth')
 			# epoch_count += 1
 
 		#Print frame count for every 1000000 (one million) frames:
