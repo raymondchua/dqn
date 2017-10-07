@@ -86,25 +86,18 @@ def play_game(env, action, num_frames):
 	state_reward = 0
 	state_done = False
 	state_obs = np.zeros((num_frames, 84, 84))
-	next_state_obs = np.zeros((num_frames, 84, 84))
-
 
 	for frame in range(num_frames):
 
-		curr_obs, reward, done, next_obs  = env.step(action)
+		curr_obs, reward, done, _  = env.step(action)
 		curr_obs_post = preprocessing(curr_obs)
-		next_obs_post = preprocessing(next_obs)
 		state_obs[frame,:,:] = curr_obs_post
-		next_state_obs[frame,:,:] = next_obs_post
 		state_reward += reward
 		state_done = state_done | done
 
 	state_obs = torch.from_numpy(state_obs).unsqueeze(0).type(Tensor)
-	next_state_obs = torch.from_numpy(next_state_obs).unsqueeze(0).type(Tensor)
 
-
-	return state_obs, state_reward, state_done, next_state_obs
-
+	return state_obs, state_reward, state_done, _
 
 
 def preprocessing(current_screen):
