@@ -284,10 +284,11 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 			action = LongTensor([[random.randrange(num_actions)]])
 
 		else:
-			action = get_greedy_action(model, curr_state)
+			action = get_greedy_action(model, current_state)
 
 		curr_obs, reward, done, _ = play_game(env, action[0,0], frames_per_state)
 
+		rewards_per_episode += reward
 		reward = Tensor([reward])
 
 		exp_replay.push(current_state, action, reward, curr_obs)
