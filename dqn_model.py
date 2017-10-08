@@ -21,7 +21,7 @@ import torchvision.transforms as T
 class DQN(nn.Module):
 	def __init__(self, num_actions, use_bn=False):
 		super(DQN, self).__init__()
-		self.conv1 = nn.Conv2d(in_channels=3, out_channels=32, kernel_size=8, stride=4)	
+		self.conv1 = nn.Conv2d(in_channels=4, out_channels=32, kernel_size=8, stride=4)	
 		# self.bn1 = nn.BatchNorm2d(32)
 		self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=4, stride=2)
 		# self.bn2 = nn.BatchNorm2d(64)

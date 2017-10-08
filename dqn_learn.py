@@ -95,6 +95,9 @@ def play_game(env, action, num_frames):
 		state_reward += reward
 		state_done = state_done | done
 
+	if state_done:
+		state_reward = -1
+
 	state_obs = torch.from_numpy(state_obs).unsqueeze(0).type(Tensor)
 
 	return state_obs, state_reward, state_done, _
@@ -125,8 +128,6 @@ def initialize_replay(env, rp_start, rp_size, num_actions, frames_per_state):
 	while episodes_count < rp_start:
 
 		action = LongTensor([[random.randrange(num_actions)]])
-		_, reward, done, _ = env.step(action[0,0])
-
 		curr_obs, reward, done, _ = play_game(env, action[0,0], frames_per_state)
 		reward = Tensor([reward])
 		
