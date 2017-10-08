@@ -81,22 +81,13 @@ def get_screen(env):
 	# return resize(screen).unsqueeze(0).type(Tensor)
 	return  torch.from_numpy(screen).unsqueeze(0).type(Tensor)
 
-def play_game(env, epsilon, num_frames):
+def play_game(env, epsilon, num_frames, model, num_actions, action=0):
 
 	state_reward = 0
 	state_done = False
 	state_obs = np.zeros((num_frames, 84, 84))
 
 	for frame in range(num_frames):
-
-		choice = random.uniform(0,1)
-
-		# select a random action
-		if choice <= epsilon:
-			action = LongTensor([[random.randrange(num_actions)]])
-
-		else:
-			action = get_greedy_action(model, current_state)
 
 		curr_obs, reward, done, _  = env.step(action)
 		curr_obs_post = preprocessing(curr_obs)
@@ -107,7 +98,7 @@ def play_game(env, epsilon, num_frames):
 			state_reward += -1
 
 		else:
-			state_reward += reward
+			state_reward += np.clip(reward, -1, 1)
 
 	state_obs = torch.from_numpy(state_obs).unsqueeze(0).type(Tensor)
 
@@ -129,17 +120,18 @@ def preprocessing(current_screen):
 
 	return luminance
 
-def initialize_replay(env, rp_start, rp_size, num_actions, frames_per_state):
+def initialize_replay(env, exp_initial, rp_start, rp_size, num_actions, frames_per_state, model):
 	exp_replay = ExpReplay(rp_size)
 	episodes_count = 0
 	env.reset()
-	current_state, _, _, _ = play_game(env,0, frames_per_state)
+
+	current_state, _, _, _ = play_game(env,exp_initial, frames_per_state, model, num_actions)
 
 
 	while episodes_count < rp_start:
 
 		action = LongTensor([[random.randrange(num_actions)]])
-		curr_obs, reward, done, _ = play_game(env, action[0,0], frames_per_state)
+		curr_obs, reward, done, _ = play_game(env, exp_initial, frames_per_state, model, num_actions, action[0][0])
 		reward = Tensor([reward])
 		
 		exp_replay.push(current_state, action, reward, curr_obs)
@@ -149,7 +141,7 @@ def initialize_replay(env, rp_start, rp_size, num_actions, frames_per_state):
 
 		if done:
 			env.reset()
-			current_state, _, _, _ = play_game(env,0, frames_per_state)
+			current_state, _, _, _ = play_game(env, exp_initial, frames_per_state, model, num_actions)
 			
 
 	print('Replay Memory Initialized.')
@@ -246,8 +238,8 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 	logging.basicConfig(filename='dqn_training.log',level=logging.INFO)
 	num_actions = env.action_space.n
 	
-	exp_replay = initialize_replay(env, rp_start, rp_size, num_actions, frames_per_state)
 	print('No. of actions: ', num_actions)
+	print(env.unwrapped.get_action_meanings())
 
 	# initialize action value and target network with the same weights
 	model = DQN(num_actions, use_bn=False)
@@ -255,6 +247,8 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 
 	# model.load_state_dict(torch.load('./saved_weights/neg_model_weights_6000.pth'))
 	target.load_state_dict(model.state_dict())
+
+	exp_replay = initialize_replay(env, exp_initial, rp_start, rp_size, num_actions, frames_per_state, model)
 
 	print('weights loaded...')
 
@@ -276,7 +270,7 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 	rewards_duration = []
 
 	env.reset()
-	current_state, _, _, _ = play_game(env,0, frames_per_state)
+	current_state, _, _, _ = play_game(env, exp_initial, frames_per_state, model, num_actions)
 
 	# eval_rand_init = np.random.randint(NO_OP_MAX, size=NUM_GAMES)
 	# print(eval_rand_init)
@@ -289,8 +283,17 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 
 		# curr_state = get_screen(env)
 		epsilon=scheduler.anneal_linear(frames_count)
+		choice = random.uniform(0,1)
+
+		# select a random action
+		if choice <= epsilon:
+			action = LongTensor([[random.randrange(num_actions)]])
+
+		else:
+			action = get_greedy_action(model, current_state)
+
 		
-		curr_obs, reward, done, _ = play_game(env, epsilon, frames_per_state)
+		curr_obs, reward, done, _ = play_game(env, epsilon, frames_per_state, model, num_actions, action[0][0])
 
 		rewards_per_episode += reward
 		reward = Tensor([reward])
@@ -316,8 +319,8 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 
 			optimizer.step()
 
-		frames_count+= 1
-		frames_per_episode+= 1
+		frames_count+= frames_per_state
+		frames_per_episode+= frames_per_state
 
 		if done:
 			# epsiodes_durations.append(frames_per_episode)
@@ -328,7 +331,7 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 			frames_per_episode=1
 			episodes_count+=1
 			env.reset()
-			current_state, _, _, _ = play_game(env,0, frames_per_state)
+			current_state, _, _, _ = play_game(env, exp_initial, frames_per_state, model, num_actions)
 
 			if episodes_count % 100 == 0:
 				avg_episode_reward = sum(rewards_duration)/100.0
