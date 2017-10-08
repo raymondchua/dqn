@@ -81,7 +81,7 @@ def get_screen(env):
 	# return resize(screen).unsqueeze(0).type(Tensor)
 	return  torch.from_numpy(screen).unsqueeze(0).type(Tensor)
 
-def play_game(env, action, num_frames):
+def play_game(env, epsilon, num_frames):
 
 	state_reward = 0
 	state_done = False
@@ -89,14 +89,25 @@ def play_game(env, action, num_frames):
 
 	for frame in range(num_frames):
 
+		choice = random.uniform(0,1)
+
+		# select a random action
+		if choice <= epsilon:
+			action = LongTensor([[random.randrange(num_actions)]])
+
+		else:
+			action = get_greedy_action(model, current_state)
+
 		curr_obs, reward, done, _  = env.step(action)
 		curr_obs_post = preprocessing(curr_obs)
 		state_obs[frame,:,:] = curr_obs_post
-		state_reward += reward
 		state_done = state_done | done
 
-	if state_done:
-		state_reward = -1
+		if done:
+			state_reward += -1
+
+		else:
+			state_reward += reward
 
 	state_obs = torch.from_numpy(state_obs).unsqueeze(0).type(Tensor)
 
@@ -232,7 +243,7 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 	frames_per_state=4):
 	
 	gym.undo_logger_setup()
-	logging.basicConfig(filename='model_3channels_training.log',level=logging.INFO)
+	logging.basicConfig(filename='dqn_training.log',level=logging.INFO)
 	num_actions = env.action_space.n
 	
 	exp_replay = initialize_replay(env, rp_start, rp_size, num_actions, frames_per_state)
@@ -278,16 +289,8 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 
 		# curr_state = get_screen(env)
 		epsilon=scheduler.anneal_linear(frames_count)
-		choice = random.uniform(0,1)
-
-		# select a random action
-		if choice <= epsilon:
-			action = LongTensor([[random.randrange(num_actions)]])
-
-		else:
-			action = get_greedy_action(model, current_state)
-
-		curr_obs, reward, done, _ = play_game(env, action[0,0], frames_per_state)
+		
+		curr_obs, reward, done, _ = play_game(env, epsilon, frames_per_state)
 
 		rewards_per_episode += reward
 		reward = Tensor([reward])
@@ -351,7 +354,7 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 			# print(eval_content)
 			# logging.info(eval_content)
 			# logging.info(average_action_value_content)
-			torch.save(model.state_dict(), './saved_weights/model_3channels_weights_'+ str(episodes_count)+'.pth')
+			torch.save(model.state_dict(), './saved_weights/dqn_weights_'+ str(episodes_count)+'.pth')
 			# epoch_count += 1
 
 		#Print frame count for every 1000000 (one million) frames:
