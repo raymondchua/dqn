@@ -36,7 +36,6 @@ Optimizer = namedtuple("Optimizer", ["type", "kwargs"])
 
 # if gpu is to be used
 use_cuda = torch.cuda.is_available()
-use_cuda = False
 FloatTensor = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
 IntTensor = torch.cuda.IntTensor if use_cuda else torch.IntTensor
 LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
@@ -226,8 +225,6 @@ def eval_model(env, model, epoch_count, eval_rand_init, frames_per_state):
 				current_state, _, _, _ = play_game(env, frames_per_state, model, num_actions, action=0, evaluate=True)
 				break
 
-		
-
 	average_reward = sum(total_reward)/float(len(total_reward))
 	average_action_value = action_value.numpy()/NUM_GAMES
 	print('Model evaluated for epoch ', epoch_count)
@@ -383,7 +380,76 @@ def dqn_inference(env, scheduler, optimizer_constructor=None, batch_size =16, rp
 			logging.info(training_update)
 
 
+def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_start=None, rp_size=None, 
+	exp_frame=1000, exp_initial=1, exp_final=0.1, gamma=0.99, target_update_steps=1000, frames_per_epoch=10000, 
+	frames_per_state=4):
+	
+	gym.undo_logger_setup()
+	logging.basicConfig(filename='dqn_eval.log',level=logging.INFO)
+	num_actions = env.action_space.n
+	
+	print('No. of actions: ', num_actions)
+	print(env.unwrapped.get_action_meanings())
+
+	# initialize action value and target network with the same weights
+	model = DQN(num_actions, use_bn=False)
 
 
+	model.load_state_dict(torch.load('./saved_weights/dqn_weights_250000.pth'))
+	print('saved weights loaded...')
 
+	if use_cuda:
+		model.cuda()
+
+	eval_epsilon = 0.05
+	env.reset()
+	total_reward = []
+	rewards_per_episode = 0
+
+	action_value = torch.zeros(num_actions)
+
+	current_state, _, _, _ = play_game(env, frames_per_state, model, num_actions, action=0, evaluate=True)
+
+	for i in range(NUM_GAMES):
+		for frame in range(int(MAX_FRAMES_PER_GAME/frames_per_state)):
+
+			# different initial condition
+			# for no_op in range(eval_rand_init[i]):
+			# 	env.step(NO_OP_ACTION)
+
+			eval_choice = random.uniform(0,1)
+
+			# select a random action
+			if eval_choice <= eval_epsilon:
+				action = LongTensor([[random.randrange(num_actions)]])
+
+			else:
+				action = get_greedy_action(model, current_state)
+
+			# _, reward, done, _ = env.step(action[0,0])
+			curr_obs, reward, done, _ = play_game(env, frames_per_state, model, num_actions, action[0][0], evaluate=True)
+
+			action_value[action[0,0]] += get_Q_value(model, action.view(1,1), curr_obs)
+
+			current_state = curr_obs
+
+			rewards_per_episode += reward
+
+			if done:
+				env.reset()
+				print(rewards_per_episode)
+				total_reward.append(rewards_per_episode)
+				rewards_per_episode = 0
+				current_state, _, _, _ = play_game(env, frames_per_state, model, num_actions, action=0, evaluate=True)
+				break
+
+	average_reward = sum(total_reward)/float(len(total_reward))
+	average_action_value = action_value.numpy()/NUM_GAMES
+
+	eval_content = 'Average Score: ', average_reward
+	average_action_value_content = 'Average Action Value: ', average_action_value
+	print(average_action_value_content)
+	print(eval_content)
+	logging.info(eval_content)
+	logging.info(average_action_value_content)
 

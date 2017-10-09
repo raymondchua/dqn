@@ -15,6 +15,7 @@ from replay_memory import ExpReplay
 from dqn_model import DQN
 
 from dqn_learn import Optimizer, dqn_inference
+from dqn_eval import 
 from util import Scheduler
 
 
@@ -46,7 +47,6 @@ def main():
 	env = gym.make('SpaceInvaders-v0').unwrapped
 	scheduler = Scheduler(EXPLORATION_FRAME, INITIAL_EXPLORE, FINAL_EXPLORE)
 	optimizer = Optimizer(type=optim.RMSprop, kwargs=dict(lr=LEARNING_RATE, alpha=RMSPROP_ALPHA, eps=RMSPROP_EPS))
-	# print(env.unwrapped.get_action_meanings())
 	dqn_inference(env, scheduler, optimizer_constructor=optimizer, 
 		batch_size = BATCH_SIZE, 
 		rp_start=REPLAY_START_SIZE, 
@@ -60,6 +60,8 @@ def main():
 		frames_per_state = NUM_FRAMES_PER_STATE)
 
 	print("pass...")
+
+	
 
 
 
