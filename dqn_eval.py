@@ -406,8 +406,8 @@ def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_star
 	total_reward = []
 	rewards_per_episode = 0
 
-	eval_rand_init = np.random.randint(NO_OP_MAX, size=NUM_GAMES)
-	print(eval_rand_init)
+	# eval_rand_init = np.random.randint(NO_OP_MAX, size=NUM_GAMES)
+	# print(eval_rand_init)
 
 	action_value = torch.zeros(num_actions)
 
@@ -417,8 +417,8 @@ def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_star
 		for frame in range(int(MAX_FRAMES_PER_GAME/frames_per_state)):
 
 			# different initial condition
-			for no_op in range(eval_rand_init[i]):
-				env.step(NO_OP_ACTION)
+			# for no_op in range(eval_rand_init[i]):
+			# 	env.step(NO_OP_ACTION)
 
 			eval_choice = random.uniform(0,1)
 
