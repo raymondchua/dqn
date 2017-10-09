@@ -416,7 +416,7 @@ def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_star
 	for i in range(NUM_GAMES):
 		for frame in range(int(MAX_FRAMES_PER_GAME/frames_per_state)):
 
-			different initial condition
+			# different initial condition
 			for no_op in range(eval_rand_init[i]):
 				env.step(NO_OP_ACTION)
 
