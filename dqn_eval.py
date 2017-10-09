@@ -45,7 +45,7 @@ Tensor = FloatTensor
 #Hyperparameters for validation
 NUM_GAMES = 30
 MAX_FRAMES_PER_GAME = 520000
-NO_OP_MAX = 3 #12 frames but since the frames are skipped randomly between 1 and 4
+NO_OP_MAX = 30
 NO_OP_ACTION = 0
 
 # MAX_FRAMES_PER_GAME = 50000
@@ -406,6 +406,9 @@ def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_star
 	total_reward = []
 	rewards_per_episode = 0
 
+	eval_rand_init = np.random.randint(NO_OP_MAX, size=NUM_GAMES)
+	print(eval_rand_init)
+
 	action_value = torch.zeros(num_actions)
 
 	current_state, _, _, _ = play_game(env, frames_per_state, model, num_actions, action=0, evaluate=True)
@@ -413,9 +416,9 @@ def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_star
 	for i in range(NUM_GAMES):
 		for frame in range(int(MAX_FRAMES_PER_GAME/frames_per_state)):
 
-			# different initial condition
-			# for no_op in range(eval_rand_init[i]):
-			# 	env.step(NO_OP_ACTION)
+			different initial condition
+			for no_op in range(eval_rand_init[i]):
+				env.step(NO_OP_ACTION)
 
 			eval_choice = random.uniform(0,1)
 
