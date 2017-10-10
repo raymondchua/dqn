@@ -435,7 +435,7 @@ def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_star
 			curr_obs, reward, done, _ = play_game(env, frames_per_state, model, num_actions, action[0][0], evaluate=True)
 
 			# action_value[action[0,0]] += get_Q_value(model, action.view(1,1), curr_obs)
-			average_action[action[0,0]].append(get_Q_value(model, action.view(1,1), curr_obs).cpu().numpy())
+			average_action[action[0,0]].append(get_Q_value(model, action.view(1,1), curr_obs))
 
 			current_state = curr_obs
 
