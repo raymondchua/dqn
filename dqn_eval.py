@@ -395,7 +395,7 @@ def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_star
 	model = DQN(num_actions, use_bn=False)
 
 
-	model.load_state_dict(torch.load('./saved_weights/dqn_weights_2500000.pth'))
+	model.load_state_dict(torch.load('./saved_weights/dqn_weights_2750000.pth'))
 	print('saved weights loaded...')
 
 	if use_cuda:
@@ -412,6 +412,8 @@ def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_star
 	action_value = torch.zeros(num_actions)
 
 	current_state, _, _, _ = play_game(env, frames_per_state, model, num_actions, action=0, evaluate=True)
+
+	average_action = {k: [] for k in range(num_actions)}
 
 	for i in range(NUM_GAMES):
 		for frame in range(int(MAX_FRAMES_PER_GAME/frames_per_state)):
@@ -432,7 +434,8 @@ def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_star
 			# _, reward, done, _ = env.step(action[0,0])
 			curr_obs, reward, done, _ = play_game(env, frames_per_state, model, num_actions, action[0][0], evaluate=True)
 
-			action_value[action[0,0]] += get_Q_value(model, action.view(1,1), curr_obs)
+			# action_value[action[0,0]] += get_Q_value(model, action.view(1,1), curr_obs)
+			average_action[action[0,0]].append(get_Q_value(model, action.view(1,1), curr_obs).cpu().numpy())
 
 			current_state = curr_obs
 
@@ -447,7 +450,13 @@ def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_star
 				break
 
 	average_reward = sum(total_reward)/float(len(total_reward))
-	average_action_value = action_value.numpy()/NUM_GAMES
+
+	total_action = 0
+	for i in range(num_actions):
+		total_action += sum(average_action[i])/len(average_action[i])
+
+	average_action_value = total_action/num_actions
+
 
 	eval_content = 'Average Score: ', average_reward
 	average_action_value_content = 'Average Action Value: ', average_action_value
