@@ -395,7 +395,7 @@ def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_star
 	model = DQN(num_actions, use_bn=False)
 
 
-	model.load_state_dict(torch.load('./saved_weights/dqn_weights_1250000.pth'))
+	model.load_state_dict(torch.load('./saved_weights/dqn_weights_1500000.pth'))
 	print('saved weights loaded...')
 
 	if use_cuda:
