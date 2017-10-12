@@ -455,7 +455,7 @@ def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_star
 
 				if done:
 					env.reset()
-					print(rewards_per_episode)
+					# print(rewards_per_episode)
 					total_reward.append(rewards_per_episode)
 					rewards_per_episode = 0
 					current_state, _, _, _ = play_game(env, frames_per_state, model, num_actions, action=0, evaluate=True)
@@ -474,7 +474,7 @@ def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_star
 		average_action_value_content = 'Average Action Value: ', average_action_value
 		print(average_action_value_content)
 		print(eval_content)
-		log_content = path + ' ' + eval_content + ' ' + average_action_value_content
+		log_content = path + ' ' + average_reward + ' ' + average_action_value
 		# logging.info(path)
 		# logging.info(eval_content)
 		# logging.info(average_action_value_content)
