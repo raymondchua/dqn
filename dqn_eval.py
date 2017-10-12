@@ -14,6 +14,8 @@ from itertools import count
 from copy import deepcopy
 import logging
 import sys
+import os
+
 
 import torch
 import torch.nn as nn
@@ -399,7 +401,7 @@ def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_star
 	saved_params = None
 	directory = None
 
-	for (dirpath, dirnames, filenames) in walk('./saved_weights'):
+	for (dirpath, dirnames, filenames) in os.walk('./saved_weights'):
 		directory = dirpath
 		saved_params = filenames
 
@@ -408,6 +410,7 @@ def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_star
 
 		# model.load_state_dict(torch.load('./saved_weights/dqn_weights_26250000.pth'))
 		model.load_state_dict(torch.load(path))
+		print(path)
 		print('saved weights loaded...')
 
 		if use_cuda:
