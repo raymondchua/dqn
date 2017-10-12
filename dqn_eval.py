@@ -474,7 +474,7 @@ def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_star
 		average_action_value_content = 'Average Action Value: ', average_action_value
 		print(average_action_value_content)
 		print(eval_content)
-		log_content = path + ' ' + average_reward + ' ' + average_action_value
+		log_content = path + ' ' + str(average_reward) + ' ' + str(average_action_value)
 		# logging.info(path)
 		# logging.info(eval_content)
 		# logging.info(average_action_value_content)
