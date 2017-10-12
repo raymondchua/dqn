@@ -406,7 +406,7 @@ def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_star
 		saved_params = filenames
 
 	for w in saved_params:
-		path = directory + w
+		path = directory + str('/') + w
 
 		# model.load_state_dict(torch.load('./saved_weights/dqn_weights_26250000.pth'))
 		model.load_state_dict(torch.load(path))
