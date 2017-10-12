@@ -385,7 +385,7 @@ def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_star
 	frames_per_state=4):
 	
 	env.seed(7)
-	random.seed(10)
+	random.seed(7)
 	gym.undo_logger_setup()
 	logging.basicConfig(filename='dqn_eval.log',level=logging.INFO)
 	num_actions = env.action_space.n
