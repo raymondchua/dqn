@@ -389,7 +389,7 @@ def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_star
 	env.seed(7)
 	random.seed(7)
 	gym.undo_logger_setup()
-	logging.basicConfig(filename='dqn_eval.log',level=logging.INFO)
+	logging.basicConfig(filename='dqn_eval_v2.log',level=logging.INFO)
 	num_actions = env.action_space.n
 	
 	print('No. of actions: ', num_actions)
@@ -401,11 +401,33 @@ def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_star
 	saved_params = None
 	directory = None
 
+	index = []
+
 	for (dirpath, dirnames, filenames) in os.walk('./saved_weights'):
 		directory = dirpath
 		saved_params = filenames
 
+<<<<<<< HEAD
+	count = 0 
+	counter = 0
+
+	for x in saved_params:
+		temp = x[12:-4]
+		index.append(temp)
+
+	index = sorted(index, key=int)
+
+	index = ['29500000']
+
+	for w in index:
+
+		# if int(w) <= 26250000:
+		# 	continue
+
+		path = directory + str('/dqn_weights_') + str(w) + '.pth'
+=======
 	print(len(saved_params))
+>>>>>>> b4e0121200420f59fb69831111a8362f991a124a
 
 	# for w in saved_params:
 	# 	path = directory + str('/') + w
@@ -432,9 +454,19 @@ def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_star
 	# 	for i in range(NUM_GAMES):
 	# 		for frame in range(int(MAX_FRAMES_PER_GAME/frames_per_state)):
 
+<<<<<<< HEAD
+				tmp_screen = cv2.cvtColor(env.render(mode='rgb_array'), cv2.COLOR_RGB2BGR)
+
+				cv2.imwrite('./images/image_'+str(counter)+'.png',tmp_screen)
+				counter+= 1
+
+			
+				eval_choice = random.uniform(0,1)
+=======
 	# 			# different initial condition
 	# 			# for no_op in range(eval_rand_init[i]):
 	# 			# 	env.step(NO_OP_ACTION)
+>>>>>>> b4e0121200420f59fb69831111a8362f991a124a
 
 	# 			eval_choice = random.uniform(0,1)
 
@@ -453,7 +485,17 @@ def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_star
 
 	# 			current_state = curr_obs
 
+<<<<<<< HEAD
+				if done:
+					env.reset()
+					print(rewards_per_episode)
+					total_reward.append(rewards_per_episode)
+					rewards_per_episode = 0
+					current_state, _, _, _ = play_game(env, frames_per_state, model, num_actions, action=0, evaluate=True)
+					break
+=======
 	# 			rewards_per_episode += reward
+>>>>>>> b4e0121200420f59fb69831111a8362f991a124a
 
 	# 			if done:
 	# 				env.reset()
@@ -481,4 +523,8 @@ def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_star
 	# 	# logging.info(eval_content)
 	# 	# logging.info(average_action_value_content)
 	# 	logging.info(log_content)
+
+		count += 1
+
+	print(count)
 
