@@ -102,7 +102,7 @@ def preprocessing(current_screen):
 	current_screen_yuv = cv2.cvtColor(current_screen, cv2.COLOR_BGR2YUV)
 	current_y, current_u, current_v = cv2.split(current_screen_yuv) #image size 210 x 160
 
-	current_y = current_y[15:-35,:]
+	current_y =  cv2.copyMakeBorder(current_y, 0,0, 25,25, cv2.BORDER_CONSTANT)
 
 	luminance = cv2.resize(current_y, (84,84)) #resize to 110 x 84
 
