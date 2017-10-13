@@ -108,6 +108,8 @@ def preprocessing(current_screen):
 	cv2.imwrite('./images/test_image_'+str(count)+'.png',luminance)
 	count+= 1
 
+	print(count)
+
 	return luminance
 
 def initialize_replay(env, exp_initial, rp_start, rp_size, num_actions, frames_per_state, model):
