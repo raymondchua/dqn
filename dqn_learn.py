@@ -103,7 +103,7 @@ def preprocessing(current_screen):
 	current_y, current_u, current_v = cv2.split(current_screen_yuv) #image size 210 x 160
 
 	luminance = cv2.resize(current_y, (84,110)) #resize to 110 x 84
-	luminance = luminance[:-26,:] #remove the score
+	luminance = luminance[13:-13,:] #remove the score
 
 	cv2.imwrite('./images/btm_image_'+str(count)+'.png',luminance)
 	count+= 1
