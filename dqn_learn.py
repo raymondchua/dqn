@@ -54,31 +54,14 @@ resize = T.Compose([T.ToPILImage(),
 					T.Scale((84,110), interpolation=Image.BILINEAR),
 					T.ToTensor()])
 
-# count = 0
+count = 0
 
 def get_screen(env):
-
-	# curr_state = np.zeros((4,84,84))
-
-	# screen = env.render(mode='rgb_array').transpose((2, 0, 1))
-	
-	# screen = screen[:,26:,:]
-	# screen = np.ascontiguousarray(screen, dtype=np.float32) / 255
-	# screen = torch.from_numpy(screen)
 
 	screen = env.render(mode='rgb_array')
 	screen = preprocessing(screen)
 	screen = np.expand_dims(screen, 0)
-	# curr_state[i,:,:] = screen
-
-	# for i in range(4):
-	# 	screen = env.render(mode='rgb_array')
-	# 	screen = preprocessing(screen)
-	# 	curr_state[i,:,:] = screen
-
-	# curr_state = curr_state / 255
-
-	# return resize(screen).unsqueeze(0).type(Tensor)
+	
 	return  torch.from_numpy(curr_state).unsqueeze(0).type(Tensor)
 
 def play_game(env, num_frames, model, num_actions, action=0, evaluate=False):
@@ -114,7 +97,7 @@ def play_game(env, num_frames, model, num_actions, action=0, evaluate=False):
 
 def preprocessing(current_screen):
 
-	# global count
+	global count
 
 	current_screen_yuv = cv2.cvtColor(current_screen, cv2.COLOR_BGR2YUV)
 	current_y, current_u, current_v = cv2.split(current_screen_yuv) #image size 210 x 160
@@ -122,8 +105,8 @@ def preprocessing(current_screen):
 	luminance = cv2.resize(current_y, (84,110)) #resize to 110 x 84
 	luminance = luminance[21:-5,:] #remove the score
 
-	# cv2.imwrite('./images/image_'+str(count)+'.png',luminance)
-	# count+= 1
+	cv2.imwrite('./images/test_image_'+str(count)+'.png',luminance)
+	count+= 1
 
 	return luminance
 
