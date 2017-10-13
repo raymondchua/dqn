@@ -405,78 +405,80 @@ def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_star
 		directory = dirpath
 		saved_params = filenames
 
-	for w in saved_params:
-		path = directory + str('/') + w
+	print(len(saved_params))
 
-		# model.load_state_dict(torch.load('./saved_weights/dqn_weights_26250000.pth'))
-		model.load_state_dict(torch.load(path))
-		print(path)
-		print('saved weights loaded...')
+	# for w in saved_params:
+	# 	path = directory + str('/') + w
 
-		if use_cuda:
-			model.cuda()
+	# 	# model.load_state_dict(torch.load('./saved_weights/dqn_weights_26250000.pth'))
+	# 	model.load_state_dict(torch.load(path))
+	# 	print(path)
+	# 	print('saved weights loaded...')
 
-		eval_epsilon = 0.05
-		env.reset()
-		total_reward = []
-		rewards_per_episode = 0
+	# 	if use_cuda:
+	# 		model.cuda()
 
-		action_value = torch.zeros(num_actions)
+	# 	eval_epsilon = 0.05
+	# 	env.reset()
+	# 	total_reward = []
+	# 	rewards_per_episode = 0
 
-		current_state, _, _, _ = play_game(env, frames_per_state, model, num_actions, action=0, evaluate=True)
+	# 	action_value = torch.zeros(num_actions)
 
-		average_action = {k: [] for k in range(num_actions)}
+	# 	current_state, _, _, _ = play_game(env, frames_per_state, model, num_actions, action=0, evaluate=True)
 
-		for i in range(NUM_GAMES):
-			for frame in range(int(MAX_FRAMES_PER_GAME/frames_per_state)):
+	# 	average_action = {k: [] for k in range(num_actions)}
 
-				# different initial condition
-				# for no_op in range(eval_rand_init[i]):
-				# 	env.step(NO_OP_ACTION)
+	# 	for i in range(NUM_GAMES):
+	# 		for frame in range(int(MAX_FRAMES_PER_GAME/frames_per_state)):
 
-				eval_choice = random.uniform(0,1)
+	# 			# different initial condition
+	# 			# for no_op in range(eval_rand_init[i]):
+	# 			# 	env.step(NO_OP_ACTION)
 
-				# select a random action
-				if eval_choice <= eval_epsilon:
-					action = LongTensor([[random.randrange(num_actions)]])
+	# 			eval_choice = random.uniform(0,1)
 
-				else:
-					action = get_greedy_action(model, current_state)
+	# 			# select a random action
+	# 			if eval_choice <= eval_epsilon:
+	# 				action = LongTensor([[random.randrange(num_actions)]])
 
-				# _, reward, done, _ = env.step(action[0,0])
-				curr_obs, reward, done, _ = play_game(env, frames_per_state, model, num_actions, action[0][0], evaluate=True)
+	# 			else:
+	# 				action = get_greedy_action(model, current_state)
 
-				# action_value[action[0,0]] += get_Q_value(model, action.view(1,1), curr_obs)
-				average_action[action[0,0]].append(get_Q_value(model, action.view(1,1), curr_obs))
+	# 			# _, reward, done, _ = env.step(action[0,0])
+	# 			curr_obs, reward, done, _ = play_game(env, frames_per_state, model, num_actions, action[0][0], evaluate=True)
 
-				current_state = curr_obs
+	# 			# action_value[action[0,0]] += get_Q_value(model, action.view(1,1), curr_obs)
+	# 			average_action[action[0,0]].append(get_Q_value(model, action.view(1,1), curr_obs))
 
-				rewards_per_episode += reward
+	# 			current_state = curr_obs
 
-				if done:
-					env.reset()
-					# print(rewards_per_episode)
-					total_reward.append(rewards_per_episode)
-					rewards_per_episode = 0
-					current_state, _, _, _ = play_game(env, frames_per_state, model, num_actions, action=0, evaluate=True)
-					break
+	# 			rewards_per_episode += reward
 
-		average_reward = sum(total_reward)/float(len(total_reward))
+	# 			if done:
+	# 				env.reset()
+	# 				# print(rewards_per_episode)
+	# 				total_reward.append(rewards_per_episode)
+	# 				rewards_per_episode = 0
+	# 				current_state, _, _, _ = play_game(env, frames_per_state, model, num_actions, action=0, evaluate=True)
+	# 				break
 
-		total_action = 0
-		for i in range(num_actions):
-			total_action += sum(average_action[i])/len(average_action[i])
+	# 	average_reward = sum(total_reward)/float(len(total_reward))
 
-		average_action_value = total_action/num_actions
+	# 	total_action = 0
+	# 	for i in range(num_actions):
+	# 		total_action += sum(average_action[i])/len(average_action[i])
+
+	# 	average_action_value = total_action/num_actions
 
 
-		eval_content = 'Average Score: ', average_reward
-		average_action_value_content = 'Average Action Value: ', average_action_value
-		print(average_action_value_content)
-		print(eval_content)
-		log_content = path + ' ' + str(average_reward) + ' ' + str(average_action_value)
-		# logging.info(path)
-		# logging.info(eval_content)
-		# logging.info(average_action_value_content)
-		logging.info(log_content)
+	# 	eval_content = 'Average Score: ', average_reward
+	# 	average_action_value_content = 'Average Action Value: ', average_action_value
+	# 	print(average_action_value_content)
+	# 	print(eval_content)
+	# 	log_content = path + ' ' + str(average_reward) + ' ' + str(average_action_value)
+	# 	# logging.info(path)
+	# 	# logging.info(eval_content)
+	# 	# logging.info(average_action_value_content)
+	# 	logging.info(log_content)
 

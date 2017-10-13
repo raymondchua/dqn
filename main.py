@@ -15,7 +15,6 @@ from replay_memory import ExpReplay
 from dqn_model import DQN
 
 from dqn_learn import Optimizer, dqn_inference
-from dqn_eval import 
 from util import Scheduler
 
 
@@ -60,64 +59,6 @@ def main():
 		frames_per_state = NUM_FRAMES_PER_STATE)
 
 	print("pass...")
-
-	
-
-
-
-	# gym.undo_logger_setup()
-	# logging.basicConfig(filename='/Users/raymondchua/Documents/openai/examples/training.log',level=logging.INFO)
-	# logging.info('test...')
-	
-
-# View the size and info of the action space
-# print(env.action_space)
-# print(env.unwrapped.get_action_meanings())
-
-# View the sie of the observation space
-# print(env.observation_space)
-
-
-
-
-# env = gym.make(args.env_id)
-
-# You provide the directory to write to (can be an existing
-# directory, including one with existing data -- all monitor files
-# will be namespaced). You can also dump to a tempdir if you'd
-# like: tempfile.mkdtemp().
-
-# best_reward = 0
-# best_timestep = 0
-
-# # Random search: try random actions 
-# for i_episode in range(1000):
-# 	observation = env.reset()
-# 	t = 0
-# 	current_reward = 0
-# 	while True:
-# 		# env.render()
-# 		# print(observation)
-# 		t += 1
-# 		action = env.action_space.sample()
-# 		observation, reward, done, info = env.step(action)
-# 		current_reward += reward
-# 		if done:
-# 			if reward > best_reward:
-# 				best_reward = current_reward
-# 				best_timestep = t
-# 			# print("Episode ", str(i_episode), " finished after {} timesteps".format(t))
-# 			# print("Current Reward: ", current_reward)
-
-# 			episode_string = "Episode ", str(i_episode), " finished after {} timesteps".format(t)
-# 			reward_string = "Current Reward: ", current_reward
-# 			logger.info(episode_string)
-# 			logger.info(reward_string)
-# 			break
-
-# # print("Best Reward: ", best_reward)
-# best_reward_string = "Best Reward: ", best_reward
-# logger.info(best_reward_string)
 
 if __name__ == '__main__':
 	main()
