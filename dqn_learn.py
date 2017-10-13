@@ -54,8 +54,6 @@ resize = T.Compose([T.ToPILImage(),
 					T.Scale((84,110), interpolation=Image.BILINEAR),
 					T.ToTensor()])
 
-count = 0
-
 def get_screen(env):
 
 	screen = env.render(mode='rgb_array')
@@ -97,8 +95,6 @@ def play_game(env, num_frames, model, num_actions, action=0, evaluate=False):
 
 def preprocessing(current_screen):
 
-	global count
-
 	current_screen_yuv = cv2.cvtColor(current_screen, cv2.COLOR_BGR2YUV)
 	current_y, current_u, current_v = cv2.split(current_screen_yuv) #image size 210 x 160
 
@@ -108,11 +104,6 @@ def preprocessing(current_screen):
 
 	# luminance = cv2.resize(current_y, (84,110)) #resize to 110 x 84
 	# luminance = luminance[13:-13,:] #remove the score
-
-	cv2.imwrite('./images/btm_image_'+str(count)+'.png',luminance)
-	count+= 1
-
-	print(count)
 
 	return luminance
 
