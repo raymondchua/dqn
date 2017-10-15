@@ -475,12 +475,21 @@ def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_star
 
 		average_action_value = total_action/num_actions
 
+		#Compute Standard Deviation
+		diff = 0
+		for x in total_reward:
+			diff += (x - average_reward)*(x - average_reward)
+		var = diff/len(total_reward)
+		std_dev = math.sqrt(var)
+
 
 		eval_content = 'Average Score: ', average_reward
+		eval_std_dev = 'Standard Deviation: ', std_dev
 		average_action_value_content = 'Average Action Value: ', average_action_value
 		print(average_action_value_content)
 		print(eval_content)
-		log_content = path + ' ' + str(average_reward) + ' ' + str(average_action_value)
+		print(eval_std_dev)
+		log_content = path + ' ' + str(average_reward) + ' ' + str(average_action_value) + ' ' + str(std_dev)
 		logging.info(log_content)
 
 		count += 1
