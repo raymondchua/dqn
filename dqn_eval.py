@@ -418,7 +418,7 @@ def dqn_eval(env, scheduler, optimizer_constructor=None, batch_size =16, rp_star
 
 	for w in index:
 
-		if int(w) <= 29750000:
+		if int(w) <= 14250000:
 			continue
 
 		path = directory + str('/dqn_weights_') + str(w) + '.pth'
