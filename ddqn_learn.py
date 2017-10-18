@@ -118,7 +118,7 @@ def ddqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp
 	loss_per_epoch = []
 
 	env.reset()
-	current_state, _, _, _ = play_game(env, frames_per_state, model)
+	current_state, _, _, _ = play_game(env, frames_per_state)
 	print('Starting training...')
 
 	count = 0
@@ -135,7 +135,7 @@ def ddqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp
 		else:
 			action = get_greedy_action(model, current_state)
 
-		curr_obs, reward, done, _ = play_game(env, frames_per_state, model, action[0][0])
+		curr_obs, reward, done, _ = play_game(env, frames_per_state, action[0][0])
 
 		rewards_per_episode += reward
 		reward = Tensor([reward])
@@ -171,7 +171,7 @@ def ddqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp
 			frames_per_episode=1
 			episodes_count+=1
 			env.reset()
-			current_state, _, _, _ = play_game(env, frames_per_state, model)
+			current_state, _, _, _ = play_game(env, frames_per_state)
 
 			if episodes_count % 100 == 0:
 				avg_episode_reward = sum(rewards_duration)/100.0
