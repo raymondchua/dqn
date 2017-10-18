@@ -86,10 +86,13 @@ def dqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 	target = DQN(num_actions, use_bn=False)
 
 	exp_replay = None
+	episodes_count = 1
 
-	if last_checkpoint is not None:
+
+	if last_checkpoint != '':
 		model.load_state_dict(torch.load(last_checkpoint))
 		exp_replay = initialize_replay_resume(env, rp_start, rp_size, frames_per_state, model)
+		episodes_count = get_index_from_checkpoint_path(last_checkpoint)
 
 	else:
 		exp_replay = initialize_replay(env, rp_start, rp_size, frames_per_state)
@@ -105,7 +108,6 @@ def dqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 	optimizer = optimizer_constructor.type(model.parameters(), lr=optimizer_constructor.kwargs['lr'],
 		alpha=optimizer_constructor.kwargs['alpha'], eps=optimizer_constructor.kwargs['eps'] )
 	
-	episodes_count = 1
 	frames_count = 1
 	frames_per_episode = 1
 	epsiodes_durations = []
