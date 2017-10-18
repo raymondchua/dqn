@@ -24,7 +24,7 @@ import torchvision.transforms as T
 from PIL import Image
 
 from replay_memory import ExpReplay, Experience
-from ddqn_model import DQN
+from dqn_model import DQN
 from scheduler import Scheduler
 from util import *
 
