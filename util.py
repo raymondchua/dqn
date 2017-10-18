@@ -14,6 +14,52 @@ LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
 ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
 Tensor = FloatTensor
 
+def preprocessing_old(current_screen):
+
+	current_screen_yuv = cv2.cvtColor(current_screen, cv2.COLOR_BGR2YUV)
+	current_y, current_u, current_v = cv2.split(current_screen_yuv) #image size 210 x 160
+
+	luminance = cv2.resize(current_y, (84,110)) #resize to 110 x 84
+	luminance = luminance[21:-5,:] #remove the score
+
+	return luminance
+
+def get_screen_old(env):
+
+	screen = env.render(mode='rgb_array')
+	screen = preprocessing_old(screen)
+	screen = np.expand_dims(screen, 0)
+	
+	return  torch.from_numpy(curr_state).unsqueeze(0).type(Tensor)
+
+def play_game_old(env, num_frames, action=0, evaluate=False):
+
+	state_reward = 0
+	state_done = False
+	state_obs = np.zeros((num_frames, 84, 84))
+
+	for frame in range(num_frames):
+
+		curr_obs, reward, done, _  = env.step(action)
+		curr_obs_post = preprocessing_old(curr_obs)
+		state_obs[frame,:,:] = curr_obs_post
+		state_done = state_done | done
+		state_reward += reward
+
+	if state_done:
+		state_reward += -1 
+
+	if state_reward < -1 and not evaluate:
+		state_reward = -1
+
+	elif state_reward > 1 and not evaluate:
+		state_reward = 1
+
+	state_obs = state_obs / 255
+	state_obs = torch.from_numpy(state_obs).unsqueeze(0).type(Tensor)
+
+	return state_obs, state_reward, state_done, _
+
 def preprocessing(current_screen):
 
 	current_screen_yuv = cv2.cvtColor(current_screen, cv2.COLOR_BGR2YUV)

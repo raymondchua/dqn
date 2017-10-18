@@ -20,6 +20,9 @@ from dqn_model import DQN
 from dqn_learn import dqn_train
 from dqn_eval import dqn_eval
 
+from dqn_learn_old import dqn_train_old
+from dqn_eval_old import dqn_eval_old
+
 from ddqn_learn import ddqn_train
 from ddqn_eval import ddqn_eval
 
@@ -49,6 +52,7 @@ from scheduler import Scheduler
 parser = argparse = argparse.ArgumentParser(description='Deep Q Network Pytorch Implementation.')
 
 parser.add_argument('--mode', 					type=str, 	help='train or eval', default='train')
+parser.add_argument('--era', 					type=str, 	help='old or new', default='new')
 parser.add_argument('--status', 				type=str,	help='Begin or resume. Begin meaning starts from zero.', default='begin')
 parser.add_argument('--model_type', 			type=str,	help='Model architecture, eg. DQN', default='dqn', choices=['dqn', 'ddqn'])
 parser.add_argument('--environment',			type=str,	help='Game environment, eg. SpaceInvaders-v0', default='SpaceInvaders-v0')
@@ -79,7 +83,43 @@ def main():
 	scheduler = Scheduler(args.explore_frame, args.initial_explore, args.final_explore)
 	optimizer = Optimizer(type=optim.RMSprop, kwargs=dict(lr=args.learning_rate, alpha=args.rmsprop_alpha, eps=args.rmsprop_eps))
 
-	if args.model_type == 'dqn' and args.mode == 'train':
+	if args.model_type == 'dqn' and args.mode == 'train' and args.era == 'old':
+		dqn_train_old(env, scheduler, optimizer_constructor=optimizer, 
+		model_type = args.model_type, 
+		batch_size = args.batch_size, 
+		rp_start = args.rp_initial, 
+		rp_size = args.rp_capacity, 
+		exp_frame = args.explore_frame, 
+		exp_initial = args.initial_explore, 
+		exp_final = args.final_explore,
+		gamma = args.discount_factor,
+		target_update_steps = args.target_update_steps,
+		frames_per_epoch = args.frames_per_epoch,
+		frames_per_state = args.frames_per_state,
+		output_directory = args.output_directory,
+		last_checkpoint = args.last_checkpoint)
+
+	elif args.model_type == 'dqn' and args.mode == 'eval' and args.era == 'old':
+
+		if not os.path.isfile(args.last_checkpoint):
+			raise FileNotFoundError('Checkpoint file cannot be found!')
+		
+		dqn_eval_old(env, scheduler, optimizer_constructor=optimizer, 
+		model_type = args.model_type, 
+		batch_size = args.batch_size, 
+		rp_start = args.rp_initial, 
+		rp_size = args.rp_capacity, 
+		exp_frame = args.explore_frame, 
+		exp_initial = args.initial_explore, 
+		exp_final = args.final_explore,
+		gamma = args.discount_factor,
+		target_update_steps = args.target_update_steps,
+		frames_per_epoch = args.frames_per_epoch,
+		frames_per_state = args.frames_per_state,
+		output_directory = args.output_directory,
+		last_checkpoint = args.last_checkpoint)
+
+	elif args.model_type == 'dqn' and args.mode == 'train' and args.era == 'new':
 		dqn_train(env, scheduler, optimizer_constructor=optimizer, 
 		model_type = args.model_type, 
 		batch_size = args.batch_size, 
@@ -95,7 +135,7 @@ def main():
 		output_directory = args.output_directory,
 		last_checkpoint = args.last_checkpoint)
 
-	elif args.model_type == 'dqn' and args.mode == 'eval':
+	elif args.model_type == 'dqn' and args.mode == 'eval' and args.era == 'new':
 
 		if not os.path.isfile(args.last_checkpoint):
 			raise FileNotFoundError('Checkpoint file cannot be found!')
@@ -116,7 +156,7 @@ def main():
 		output_directory = args.output_directory,
 		last_checkpoint = args.last_checkpoint)
 
-	elif args.model_type == 'ddqn' and args.mode == 'train':
+	elif args.model_type == 'ddqn' and args.mode == 'train' and args.era == 'new':
 		ddqn_train(env, scheduler, optimizer_constructor=optimizer, 
 		model_type = args.model_type, 
 		batch_size = args.batch_size, 
@@ -132,7 +172,7 @@ def main():
 		output_directory = args.output_directory,
 		last_checkpoint = args.last_checkpoint)
 
-	elif args.model_type == 'ddqn' and args.mode == 'eval':
+	elif args.model_type == 'ddqn' and args.mode == 'eval' and args.era == 'new':
 
 		if not os.path.isfile(args.last_checkpoint):
 			raise FileNotFoundError('Checkpoint file cannot be found!')
