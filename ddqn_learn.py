@@ -20,13 +20,14 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.autograd import Variable
-# import torchvision.transforms as T
-# from PIL import Image
+import torchvision.transforms as T
+from PIL import Image
 
 from replay_memory import ExpReplay, Experience
-from dqn_model import DQN
+from ddqn_model import DQN
 from scheduler import Scheduler
 from util import *
+
 
 import time
 
@@ -44,7 +45,7 @@ Tensor = FloatTensor
 NUM_GAMES = 30
 MAX_FRAMES_PER_GAME = 520000
 
-def dqn_compute_y(batch, batch_size, model, target, gamma):
+def ddqn_compute_y(batch, batch_size, model, target, gamma):
 
 	non_final_mask = ByteTensor(tuple(map(lambda s: s is not None, batch.next_state))) #to get a boolean value of 1 if not final 
 	non_final_next_states = Variable(torch.cat([s for s in batch.next_state if s is not None]), volatile=True)
@@ -56,26 +57,27 @@ def dqn_compute_y(batch, batch_size, model, target, gamma):
 	#compute Q(s,a) based on the action taken
 	state_action_values = model(state_batch).gather(1,action_batch)
 
-	next_state_action_values = Variable(torch.zeros(batch_size)).type(Tensor)
-	next_state_action_values[non_final_mask] = target(non_final_next_states).max(1)[0]
+	model_actions = model(non_final_next_states).data.max(1)[1].view(batch_size,1)
+	model_action_batch = Variable(torch.cat([model_actions]), volatile=True)
 
+	next_state_action_values = Variable(torch.zeros(batch_size)).type(Tensor)
+	next_state_action_values[non_final_mask] = target(non_final_next_states).gather(1, model_action_batch)
 	next_state_action_values.volatile = False
 
 	y_output = reward_batch + (gamma * next_state_action_values)
-
-	 # Compute Huber loss
+	y_output = y_output.view(batch_size,1)
+	
+	# Compute Huber loss
 	loss = F.smooth_l1_loss(state_action_values, y_output)
 
 	return loss
 
-
-
-def dqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_start, rp_size, 
+def ddqn_inference(env, scheduler, optimizer_constructor, model_type, batch_size, rp_start, rp_size, 
 	exp_frame, exp_initial, exp_final, gamma, target_update_steps, frames_per_epoch, 
 	frames_per_state, output_directory, last_checkpoint):
 	
 	gym.undo_logger_setup()
-	logging.basicConfig(filename=model+'_training.log',level=logging.INFO)
+	logging.basicConfig(filename='ddqn_training.log',level=logging.INFO)
 	num_actions = env.action_space.n
 	
 	print('No. of actions: ', num_actions)
@@ -95,6 +97,9 @@ def dqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 		exp_replay = initialize_replay(env, rp_start, rp_size, frames_per_state)
 
 	target.load_state_dict(model.state_dict())
+
+	exp_replay = initialize_replay(env, exp_initial, rp_start, rp_size, num_actions, frames_per_state, model)
+
 	print('weights loaded...')
 
 	if use_cuda:
@@ -104,7 +109,8 @@ def dqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 	# scheduler = Scheduler(exp_frame, exp_initial, exp_final)
 	optimizer = optimizer_constructor.type(model.parameters(), lr=optimizer_constructor.kwargs['lr'],
 		alpha=optimizer_constructor.kwargs['alpha'], eps=optimizer_constructor.kwargs['eps'] )
-	
+
+
 	episodes_count = 1
 	frames_count = 1
 	frames_per_episode = 1
@@ -114,9 +120,7 @@ def dqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 	loss_per_epoch = []
 
 	env.reset()
-
 	current_state, _, _, _ = play_game(env, frames_per_state, model)
-
 	print('Starting training...')
 
 	count = 0
@@ -133,7 +137,6 @@ def dqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 		else:
 			action = get_greedy_action(model, current_state)
 
-		
 		curr_obs, reward, done, _ = play_game(env, frames_per_state, model, action[0][0])
 
 		rewards_per_episode += reward
@@ -151,7 +154,7 @@ def dqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 		#compute y 
 		if len(exp_replay) >= batch_size:
 			
-			loss = dqn_compute_y(batch, batch_size, model, target, gamma)
+			loss = ddqn_compute_y(batch, batch_size, model, target, gamma)
 			optimizer.zero_grad()
 			loss.backward()
 
