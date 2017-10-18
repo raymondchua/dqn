@@ -134,7 +134,7 @@ def get_index_from_checkpoint_path(checkpoint):
 	chck_filename_key = chck_filename.split('_')
 	chck_index = chck_filename_key[2]
 
-	return chck_index
+	return long(chck_index)
 
 def get_index_from_checkpoint_file(checkpoint):
 	"""
@@ -145,6 +145,6 @@ def get_index_from_checkpoint_file(checkpoint):
 	chck_filename_key = chck_filename.split('_')
 	chck_index = chck_filename_key[2]
 
-	return chck_index
+	return long(chck_index)
 
 
