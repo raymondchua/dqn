@@ -115,7 +115,6 @@ def ddqn_eval(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 	index = sorted(index, key=int)
 
 	for w in index:
-		print(directory)
 		path = directory + '/'  + model_type + '_weights_' + str(w) + '.pth'
 		model.load_state_dict(torch.load(path))
 		print(path)
@@ -128,7 +127,7 @@ def ddqn_eval(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 
 		action_value = torch.zeros(num_actions)
 
-		current_state, _, _, _ = play_game(env, frames_per_state, model, num_actions, action=0, evaluate=True)
+		current_state, _, _, _ = play_game(env, frames_per_state, action=0, evaluate=True)
 
 		average_action = {k: [] for k in range(num_actions)}
 
@@ -145,7 +144,7 @@ def ddqn_eval(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 					action = get_greedy_action(model, current_state)
 
 				# _, reward, done, _ = env.step(action[0,0])
-				curr_obs, reward, done, _ = play_game(env, frames_per_state, model, num_actions, action[0][0], evaluate=True)
+				curr_obs, reward, done, _ = play_game(env, frames_per_state, action[0][0], evaluate=True)
 
 				average_action[action[0,0]].append(get_Q_value(model, action.view(1,1), curr_obs))
 
@@ -156,7 +155,7 @@ def ddqn_eval(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 					env.reset()
 					total_reward.append(rewards_per_episode)
 					rewards_per_episode = 0
-					current_state, _, _, _ = play_game(env, frames_per_state, model, num_actions, action=0, evaluate=True)
+					current_state, _, _, _ = play_game(env, frames_per_state, action=0, evaluate=True)
 					break
 
 		average_reward = sum(total_reward)/float(len(total_reward))
