@@ -195,8 +195,6 @@ def main():
 			if not os.path.isfile(args.last_checkpoint):
 				raise FileNotFoundError('Checkpoint file cannot be found!')
 
-		print("HERE")
-
 		ddqn_eval(env, scheduler, optimizer_constructor=optimizer, 
 		model_type = args.model_type, 
 		batch_size = args.batch_size, 
