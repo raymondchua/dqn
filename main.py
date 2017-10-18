@@ -67,7 +67,7 @@ parser.add_argument('--rmsprop_eps',			type=float, help='Term added to the denom
 parser.add_argument('--explore_frame',			type=int, 	help='Num of frames over which the initial value of epsilon is linearly annealed to the final value', default=50000)
 parser.add_argument('--learning_rate', 			type=float, help='Learning rate', default=0.00025)
 parser.add_argument('--output_directory',		type=str,	help='Output directory to save weights, if empty, outputs to a local folder named \'saved_weights\'', default='./saved_weights/')
-parser.add_argument('--last_checkpoint',		type=str,	help='Last saved weights that you wish to use to either resume training or for eval.', default=None)
+parser.add_argument('--last_checkpoint',		type=str,	help='Last saved weights that you wish to use to either resume training or for eval.', default='')
 
 args = parser.parse_args()
 
