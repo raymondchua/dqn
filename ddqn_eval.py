@@ -116,7 +116,7 @@ def ddqn_eval(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 
 	for w in index:
 
-		path = directory + '/' + model_type + '_weights_' + str(w) + '.pth'
+		path = directory + '/' + model_type + '/' + model_type + '_weights_' + str(w) + '.pth'
 		model.load_state_dict(torch.load(path))
 		print(path)
 		print('saved weights loaded...')
