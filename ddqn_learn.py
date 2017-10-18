@@ -79,6 +79,7 @@ def ddqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp
 	gym.undo_logger_setup()
 	logging.basicConfig(filename='ddqn_training.log',level=logging.INFO)
 	num_actions = env.action_space.n
+	env.reset()
 	
 	print('No. of actions: ', num_actions)
 	print(env.unwrapped.get_action_meanings())
@@ -96,6 +97,7 @@ def ddqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp
 
 	if last_checkpoint:
 		model.load_state_dict(torch.load(last_checkpoint))
+		print(last_checkpoint)
 		print('weights loaded...')
 
 		exp_replay = initialize_replay_resume(env, rp_start, rp_size, frames_per_state, model)
@@ -118,7 +120,7 @@ def ddqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp
 	rewards_duration = []
 	loss_per_epoch = []
 
-	env.reset()
+	
 	current_state, _, _, _ = play_game(env, frames_per_state)
 	print('Starting training...')
 
