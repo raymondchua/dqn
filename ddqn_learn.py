@@ -72,7 +72,7 @@ def ddqn_compute_y(batch, batch_size, model, target, gamma):
 
 	return loss
 
-def ddqn_inference(env, scheduler, optimizer_constructor, model_type, batch_size, rp_start, rp_size, 
+def ddqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_start, rp_size, 
 	exp_frame, exp_initial, exp_final, gamma, target_update_steps, frames_per_epoch, 
 	frames_per_state, output_directory, last_checkpoint):
 	
