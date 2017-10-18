@@ -96,6 +96,8 @@ def ddqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp
 
 	if last_checkpoint:
 		model.load_state_dict(torch.load(last_checkpoint))
+		print('weights loaded...')
+
 		exp_replay = initialize_replay_resume(env, rp_start, rp_size, frames_per_state, model)
 		episodes_count = get_index_from_checkpoint_path(last_checkpoint)
 
@@ -104,7 +106,6 @@ def ddqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp
 
 	target.load_state_dict(model.state_dict())
 
-	print('weights loaded...')
 
 	# scheduler = Scheduler(exp_frame, exp_initial, exp_final)
 	optimizer = optimizer_constructor.type(model.parameters(), lr=optimizer_constructor.kwargs['lr'],

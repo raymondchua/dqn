@@ -169,7 +169,7 @@ def initialize_replay_resume(env, rp_start, rp_size, frames_per_state, model):
 			current_state, _, _, _ = play_game(env, frames_per_state)
 			
 
-	print('Replay Memory initialized for evaluation...')
+	print('Replay Memory re-initialized for training...')
 	return exp_replay
 
 def get_index_from_checkpoint_path(checkpoint):
