@@ -3,6 +3,7 @@ from collections import namedtuple
 import logging
 import sys
 import argparse
+import os 
 
 
 import gym
@@ -95,6 +96,11 @@ def main():
 		last_checkpoint = args.last_checkpoint)
 
 	elif args.model == 'dqn' and args.mode == 'eval':
+
+		if not os.path.isfile(args.last_checkpoint):
+			raise FileNotFoundError('Checkpoint file cannot be found!')
+
+
 		dqn_eval(env, scheduler, optimizer_constructor=optimizer, 
 		model_type = args.model_type, 
 		batch_size = args.batch_size, 
@@ -127,6 +133,10 @@ def main():
 		last_checkpoint = args.last_checkpoint)
 
 	elif args.model == 'ddqn' and args.mode == 'eval':
+
+		if not os.path.isfile(args.last_checkpoint):
+			raise FileNotFoundError('Checkpoint file cannot be found!')
+
 		ddqn_eval(env, scheduler, optimizer_constructor=optimizer, 
 		model_type = args.model_type, 
 		batch_size = args.batch_size, 
