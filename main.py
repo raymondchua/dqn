@@ -88,7 +88,7 @@ def main():
 		if not args.last_checkpoint:
 			if not os.path.isfile(args.last_checkpoint):
 				raise FileNotFoundError('Checkpoint file cannot be found!')
-		
+
 		dqn_train_old(env, scheduler, optimizer_constructor=optimizer, 
 		model_type = args.model_type, 
 		batch_size = args.batch_size, 
@@ -194,6 +194,8 @@ def main():
 		if not args.last_checkpoint:
 			if not os.path.isfile(args.last_checkpoint):
 				raise FileNotFoundError('Checkpoint file cannot be found!')
+
+		print("HERE")
 
 		ddqn_eval(env, scheduler, optimizer_constructor=optimizer, 
 		model_type = args.model_type, 
