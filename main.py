@@ -84,6 +84,11 @@ def main():
 	optimizer = Optimizer(type=optim.RMSprop, kwargs=dict(lr=args.learning_rate, alpha=args.rmsprop_alpha, eps=args.rmsprop_eps))
 
 	if args.model_type == 'dqn' and args.mode == 'train' and args.era == 'old':
+
+		if not args.last_checkpoint:
+			if not os.path.isfile(args.last_checkpoint):
+				raise FileNotFoundError('Checkpoint file cannot be found!')
+		
 		dqn_train_old(env, scheduler, optimizer_constructor=optimizer, 
 		model_type = args.model_type, 
 		batch_size = args.batch_size, 
@@ -101,9 +106,10 @@ def main():
 
 	elif args.model_type == 'dqn' and args.mode == 'eval' and args.era == 'old':
 
-		if not os.path.isfile(args.last_checkpoint):
-			raise FileNotFoundError('Checkpoint file cannot be found!')
-		
+		if not args.last_checkpoint:
+			if not os.path.isfile(args.last_checkpoint):
+				raise FileNotFoundError('Checkpoint file cannot be found!')
+
 		dqn_eval_old(env, scheduler, optimizer_constructor=optimizer, 
 		model_type = args.model_type, 
 		batch_size = args.batch_size, 
@@ -120,6 +126,11 @@ def main():
 		last_checkpoint = args.last_checkpoint)
 
 	elif args.model_type == 'dqn' and args.mode == 'train' and args.era == 'new':
+
+		if not args.last_checkpoint:
+			if not os.path.isfile(args.last_checkpoint):
+				raise FileNotFoundError('Checkpoint file cannot be found!')
+
 		dqn_train(env, scheduler, optimizer_constructor=optimizer, 
 		model_type = args.model_type, 
 		batch_size = args.batch_size, 
@@ -137,8 +148,9 @@ def main():
 
 	elif args.model_type == 'dqn' and args.mode == 'eval' and args.era == 'new':
 
-		if not os.path.isfile(args.last_checkpoint):
-			raise FileNotFoundError('Checkpoint file cannot be found!')
+		if not args.last_checkpoint:
+			if not os.path.isfile(args.last_checkpoint):
+				raise FileNotFoundError('Checkpoint file cannot be found!')
 
 
 		dqn_eval(env, scheduler, optimizer_constructor=optimizer, 
@@ -157,6 +169,11 @@ def main():
 		last_checkpoint = args.last_checkpoint)
 
 	elif args.model_type == 'ddqn' and args.mode == 'train' and args.era == 'new':
+
+		if not args.last_checkpoint:
+			if not os.path.isfile(args.last_checkpoint):
+				raise FileNotFoundError('Checkpoint file cannot be found!')
+
 		ddqn_train(env, scheduler, optimizer_constructor=optimizer, 
 		model_type = args.model_type, 
 		batch_size = args.batch_size, 
@@ -174,8 +191,9 @@ def main():
 
 	elif args.model_type == 'ddqn' and args.mode == 'eval' and args.era == 'new':
 
-		if not os.path.isfile(args.last_checkpoint):
-			raise FileNotFoundError('Checkpoint file cannot be found!')
+		if not args.last_checkpoint:
+			if not os.path.isfile(args.last_checkpoint):
+				raise FileNotFoundError('Checkpoint file cannot be found!')
 
 		ddqn_eval(env, scheduler, optimizer_constructor=optimizer, 
 		model_type = args.model_type, 
