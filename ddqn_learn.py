@@ -87,6 +87,10 @@ def ddqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp
 	model = DQN(num_actions, use_bn=False)
 	target = DQN(num_actions, use_bn=False)
 
+	if use_cuda:
+		model.cuda()
+		target.cuda()
+
 	exp_replay = None
 	episodes_count = 1
 
@@ -104,10 +108,6 @@ def ddqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp
 	exp_replay = initialize_replay(env, exp_initial, rp_start, rp_size, num_actions, frames_per_state, model)
 
 	print('weights loaded...')
-
-	if use_cuda:
-		model.cuda()
-		target.cuda()
 
 	# scheduler = Scheduler(exp_frame, exp_initial, exp_final)
 	optimizer = optimizer_constructor.type(model.parameters(), lr=optimizer_constructor.kwargs['lr'],
