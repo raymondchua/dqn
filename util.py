@@ -121,12 +121,12 @@ def initialize_replay(env, rp_start, rp_size, frames_per_state):
 	env.reset()
 	num_actions = env.action_space.n
 
-	current_state, _, _, _ = play_game(env, frames_per_state, num_actions)
+	current_state, _, _, _ = play_game(env, frames_per_state)
 
 	while episodes_count < rp_start:
 
 		action = LongTensor([[random.randrange(num_actions)]])
-		curr_obs, reward, done, _ = play_game(env, frames_per_state, num_actions, action[0][0])
+		curr_obs, reward, done, _ = play_game(env, frames_per_state, action[0][0])
 		reward = Tensor([reward])
 		
 		exp_replay.push(current_state, action, reward, curr_obs)
@@ -136,7 +136,7 @@ def initialize_replay(env, rp_start, rp_size, frames_per_state):
 
 		if done:
 			env.reset()
-			current_state, _, _, _ = play_game(env, frames_per_state, num_actions)
+			current_state, _, _, _ = play_game(env, frames_per_state)
 			
 
 	print('Replay Memory initialized for training...')
@@ -148,12 +148,12 @@ def initialize_replay_resume(env, rp_start, rp_size, frames_per_state, model):
 	env.reset()
 	num_actions = env.action_space.n
 
-	current_state, _, _, _ = play_game(env, frames_per_state, num_actions)
+	current_state, _, _, _ = play_game(env, frames_per_state)
 
 	while episodes_count < rp_start:
 
 		action = get_greedy_action(model, current_state)
-		curr_obs, reward, done, _ = play_game(env, frames_per_state, num_actions, action[0][0])
+		curr_obs, reward, done, _ = play_game(env, frames_per_state, action[0][0])
 		reward = Tensor([reward])
 		
 		exp_replay.push(current_state, action, reward, curr_obs)
@@ -163,7 +163,7 @@ def initialize_replay_resume(env, rp_start, rp_size, frames_per_state, model):
 
 		if done:
 			env.reset()
-			current_state, _, _, _ = play_game(env, frames_per_state, num_actions)
+			current_state, _, _, _ = play_game(env, frames_per_state)
 			
 
 	print('Replay Memory initialized for evaluation...')
