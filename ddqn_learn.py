@@ -94,7 +94,7 @@ def ddqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp
 	exp_replay = None
 	episodes_count = 1
 
-	if not last_checkpoint:
+	if last_checkpoint:
 		model.load_state_dict(torch.load(last_checkpoint))
 		exp_replay = initialize_replay_resume(env, rp_start, rp_size, frames_per_state, model)
 		episodes_count = get_index_from_checkpoint_path(last_checkpoint)
