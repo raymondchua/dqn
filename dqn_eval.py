@@ -107,6 +107,7 @@ def dqn_eval(env, scheduler, optimizer_constructor, model_type, batch_size, rp_s
 
 	for x in saved_params:
 		temp = get_index_from_checkpoint_file(x)
+		print(temp)
 		if temp > chckpoint_index:
 			index.append(temp)
 
