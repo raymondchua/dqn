@@ -75,7 +75,7 @@ def dqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 	frames_per_state, output_directory, last_checkpoint):
 	
 	gym.undo_logger_setup()
-	logging.basicConfig(filename=model+'_training.log',level=logging.INFO)
+	logging.basicConfig(filename=model_type+'_training.log',level=logging.INFO)
 	num_actions = env.action_space.n
 	
 	print('No. of actions: ', num_actions)
