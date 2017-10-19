@@ -85,7 +85,7 @@ def main():
 
 	if args.model_type == 'dqn' and args.mode == 'train' and args.era == 'old':
 
-		if not args.last_checkpoint:
+		if args.last_checkpoint:
 			if not os.path.isfile(args.last_checkpoint):
 				raise FileNotFoundError('Checkpoint file cannot be found!')
 
@@ -106,7 +106,7 @@ def main():
 
 	elif args.model_type == 'dqn' and args.mode == 'eval' and args.era == 'old':
 
-		if not args.last_checkpoint:
+		if args.last_checkpoint:
 			if not os.path.isfile(args.last_checkpoint):
 				raise FileNotFoundError('Checkpoint file cannot be found!')
 
@@ -127,7 +127,7 @@ def main():
 
 	elif args.model_type == 'dqn' and args.mode == 'train' and args.era == 'new':
 
-		if not args.last_checkpoint:
+		if args.last_checkpoint:
 			if not os.path.isfile(args.last_checkpoint):
 				raise FileNotFoundError('Checkpoint file cannot be found!')
 
@@ -148,7 +148,7 @@ def main():
 
 	elif args.model_type == 'dqn' and args.mode == 'eval' and args.era == 'new':
 
-		if not args.last_checkpoint:
+		if args.last_checkpoint:
 			if not os.path.isfile(args.last_checkpoint):
 				raise FileNotFoundError('Checkpoint file cannot be found!')
 
@@ -170,7 +170,7 @@ def main():
 
 	elif args.model_type == 'ddqn' and args.mode == 'train' and args.era == 'new':
 
-		if not args.last_checkpoint:
+		if args.last_checkpoint:
 			if not os.path.isfile(args.last_checkpoint):
 				raise FileNotFoundError('Checkpoint file cannot be found!')
 
@@ -191,7 +191,7 @@ def main():
 
 	elif args.model_type == 'ddqn' and args.mode == 'eval' and args.era == 'new':
 
-		if not args.last_checkpoint:
+		if args.last_checkpoint:
 			if not os.path.isfile(args.last_checkpoint):
 				raise FileNotFoundError('Checkpoint file cannot be found!')
 
@@ -209,21 +209,6 @@ def main():
 		frames_per_state = args.frames_per_state,
 		output_directory = args.output_directory,
 		last_checkpoint = args.last_checkpoint)
-
-
-
-
-	# dqn_inference(env, scheduler, optimizer_constructor=optimizer, 
-	# 	batch_size = BATCH_SIZE, 
-	# 	rp_start=REPLAY_START_SIZE, 
-	# 	rp_size=REPLAY_MEMO_SIZE, 
-	# 	exp_frame=EXPLORATION_FRAME, 
-	# 	exp_initial=INITIAL_EXPLORE, 
-	# 	exp_final=FINAL_EXPLORE,
-	# 	gamma=DISCOUNT_FACTOR,
-	# 	target_update_steps=TARGET_UPDATE_FREQ,
-	# 	frames_per_epoch=FRAMES_PER_EPOCH,
-	# 	frames_per_state = NUM_FRAMES_PER_STATE)
 
 	print("pass...")
 
