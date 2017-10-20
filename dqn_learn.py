@@ -66,7 +66,7 @@ def dqn_compute_y(batch, batch_size, model, target, gamma):
 	 # Compute Huber loss
 	loss = F.smooth_l1_loss(state_action_values, y_output)
 
-	return loss
+	return loss.data.clamp_(-1,1)
 
 
 
