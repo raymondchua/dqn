@@ -26,34 +26,14 @@ from dqn_eval_old import dqn_eval_old
 from ddqn_learn import ddqn_train
 from ddqn_eval import ddqn_eval
 
+from ddqn_rankPriority_learn import ddqn_rank_train
+
 from scheduler import Scheduler
-
-
-# BATCH_SIZE = 32
-# REPLAY_MEMO_SIZE = 100000
-# TARGET_UPDATE_FREQ = 10000
-# DISCOUNT_FACTOR = 0.99
-# LEARNING_RATE = 0.00025
-# INITIAL_EXPLORE = 1
-# FINAL_EXPLORE = 0.1
-# FRAMES_PER_EPOCH = 250000
-# EXPLORATION_FRAME = 1000000
-# REPLAY_START_SIZE = 50000
-
-# RMSPROP_ALPHA = 0.95
-# RMSPROP_EPS = 0.01
-
-# NUM_FRAMES_PER_STATE = 4
-
-# REPLAY_START_SIZE = 500
-# EXPLORATION_FRAME=10000
-# FRAMES_PER_EPOCH = 10000
 
 parser = argparse = argparse.ArgumentParser(description='Deep Q Network Pytorch Implementation.')
 
 parser.add_argument('--mode', 					type=str, 	help='train or eval', default='train')
 parser.add_argument('--era', 					type=str, 	help='old or new', default='new')
-parser.add_argument('--status', 				type=str,	help='Begin or resume. Begin meaning starts from zero.', default='begin')
 parser.add_argument('--model_type', 			type=str,	help='Model architecture, eg. DQN', default='dqn', choices=['dqn', 'ddqn'])
 parser.add_argument('--environment',			type=str,	help='Game environment, eg. SpaceInvaders-v0', default='SpaceInvaders-v0')
 parser.add_argument('--input_size', 			type=int,	help='Input size for N x N. Resizing and/or padding is applied whenever necessary', default=84)
@@ -63,6 +43,7 @@ parser.add_argument('--rp_initial',				type=int, 	help='Initial size to populate
 parser.add_argument('--target_update_steps',	type=int, 	help='The frequency with which the target network is updated', default=10000)
 parser.add_argument('--frames_per_epoch',		type=int, 	help='Num frames per epoch. Useful as a counter for eval', default=250000)
 parser.add_argument('--frames_per_state',		type=int, 	help='The number of most recent frames used as an input to the Q network. Actions are repeated over these frames.', default=4)
+parser.add_argument('--inital_beta', 			type=float, help='Beta is the exponent value for the importance sampling weights', default=0.5)
 parser.add_argument('--discount_factor', 		type=float, help='Discount factor gamma used in the Q-learning udate', default=0.99)
 parser.add_argument('--initial_explore', 		type=float,	help='Initial value of epsilon in epsilon-greedy exploration', default=1.0)
 parser.add_argument('--final_explore', 			type=float,	help='Final value of epsilon in epsilon-greedy exploration', default=0.1)
@@ -70,6 +51,7 @@ parser.add_argument('--rmsprop_alpha',			type=float, help='Smoothing constant fo
 parser.add_argument('--rmsprop_eps',			type=float, help='Term added to the denominator to improve numerical stability for RMSprop.  See pytorch doc for more info.', default=0.01)
 parser.add_argument('--explore_frame',			type=int, 	help='Num of frames over which the initial value of epsilon is linearly annealed to the final value', default=50000)
 parser.add_argument('--learning_rate', 			type=float, help='Learning rate', default=0.00025)
+parser.add_argument('--rank_priority',			type=bool,	help='Use rank prioritized replay memory if true', default=False)
 parser.add_argument('--output_directory',		type=str,	help='Output directory to save weights, if empty, outputs to a local folder named \'saved_weights\'', default='./saved_weights/')
 parser.add_argument('--last_checkpoint',		type=str,	help='Last saved weights that you wish to use to either resume training or for eval.', default='')
 
@@ -174,20 +156,38 @@ def main():
 			if not os.path.isfile(args.last_checkpoint):
 				raise FileNotFoundError('Checkpoint file cannot be found!')
 
-		ddqn_train(env, scheduler, optimizer_constructor=optimizer, 
-		model_type = args.model_type, 
-		batch_size = args.batch_size, 
-		rp_start = args.rp_initial, 
-		rp_size = args.rp_capacity, 
-		exp_frame = args.explore_frame, 
-		exp_initial = args.initial_explore, 
-		exp_final = args.final_explore,
-		gamma = args.discount_factor,
-		target_update_steps = args.target_update_steps,
-		frames_per_epoch = args.frames_per_epoch,
-		frames_per_state = args.frames_per_state,
-		output_directory = args.output_directory,
-		last_checkpoint = args.last_checkpoint)
+		if args.rank_priority: 
+			ddqn_rank_train(env, scheduler, optimizer_constructor=optimizer, 
+			model_type = args.model_type, 
+			batch_size = args.batch_size, 
+			rp_start = args.rp_initial, 
+			rp_size = args.rp_capacity, 
+			exp_frame = args.explore_frame, 
+			exp_initial = args.initial_explore, 
+			exp_final = args.final_explore,
+			inital_beta = args.inital_beta,
+			gamma = args.discount_factor,
+			target_update_steps = args.target_update_steps,
+			frames_per_epoch = args.frames_per_epoch,
+			frames_per_state = args.frames_per_state,
+			output_directory = args.output_directory,
+			last_checkpoint = args.last_checkpoint)
+
+		else:
+			ddqn_train(env, scheduler, optimizer_constructor=optimizer, 
+			model_type = args.model_type, 
+			batch_size = args.batch_size, 
+			rp_start = args.rp_initial, 
+			rp_size = args.rp_capacity, 
+			exp_frame = args.explore_frame, 
+			exp_initial = args.initial_explore, 
+			exp_final = args.final_explore,
+			gamma = args.discount_factor,
+			target_update_steps = args.target_update_steps,
+			frames_per_epoch = args.frames_per_epoch,
+			frames_per_state = args.frames_per_state,
+			output_directory = args.output_directory,
+			last_checkpoint = args.last_checkpoint)
 
 	elif args.model_type == 'ddqn' and args.mode == 'eval' and args.era == 'new':
 

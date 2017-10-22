@@ -22,14 +22,24 @@ Experience = namedtuple('Experience', ('state', 'action', 'reward','next_state',
 
 class RankBasedPrioritizedReplay(object):
 	"""
+	Implementation of Rank Based Prioritized Replay.
+
+	Probability of sampling transition i is defined as :
+		p_i = 1 / rank(i)
+	where rank(i) is the rank of transition i when the replay memory is sorted according to td-error.
+	Refer to the paper, "Priotitized Experience Replay" section 3.3 for more info.
+	
+	Data structure used to approximate the sorted priority queue is a binary heap.  
 	Memory index to begin from 1 so that we can use integer division by 2 for quick indexing. 
 	"""
 	def __init__(self, N):
 		self.capacity = N 
 		self.memory = []
-		self.position = 0
+		self.position = 1
 		self.prioritySum = 0
-		self.memory[0] = None
+		self.memory.append(None)
+		self.minPriority = 0
+		self.maxPriority = 0
 
 	def push(self, state, action, reward, next_state, td_error):
 		"""
@@ -49,6 +59,17 @@ class RankBasedPrioritizedReplay(object):
 			self.prioritySum -= temp.td_error
 			self.prioritySum += td_error
 
+		if len(self.memory) == 2:
+			self.minPriority = td_error
+			self.maxPriority = td_error
+
+		elif td_error < self.minPriority:
+			self.minPriority = td_error
+
+		elif td_error > self.maxPriority:
+			self.maxPriority = td_error
+
+
 	def sort(self):
 		i = len(self.memory) // 2
 		while(i > 0):
@@ -59,7 +80,7 @@ class RankBasedPrioritizedReplay(object):
 		while(i * 2) <= len(self.memory):
 			temp_maxChild = self.maxChild(i)
 
-			if self.memory[i] < self.memory[temp_maxChild]:
+			if self.memory[i].td_error < self.memory[temp_maxChild].td_error:
 				tmp = self.memory[i]
 				self.memory[i] = self.memory[temp_maxChild]
 				self.memory[temp_maxChild] = tmp
@@ -67,11 +88,13 @@ class RankBasedPrioritizedReplay(object):
 			i = temp_maxChild
 
 	def maxChild(self, i):
-		if (i*2) + 1 > len(self.memory):
+
+		if ((i*2) + 1) > (len(self.memory)-1):
 			return i * 2
 
 		else:
-			if self.memory[i*2].td_error > self.memory[(i*2)+1]:
+
+			if self.memory[i*2].td_error > self.memory[(i*2)+1].td_error:
 				return i * 2
 
 			else:
@@ -83,21 +106,60 @@ class RankBasedPrioritizedReplay(object):
 		Extract one random sample weighted by priority values from the replay memory.
 		"""
 		maxPriority = math.floor(self.prioritySum)
-		randPriority = random.randint(1, maxPriority)
+		randPriority = random.uniform(0, maxPriority)
+		rank = 1
 
-		for i in range(len(self.memory)):
+		for i in range(1, len(self.memory)):
 			current = self.memory[i]
 			if current.td_error <= randPriority:
 				chosen_sample = current
+				chosen_sample_index = i 
 				break
 
 			randPriority -= current.td_error
+			rank += 1
 
-		return chosen_sample
+		#swap selected sample with the last sample in the array
+		self.memory[i] = self.memory[len(self.memory)-1]
+		self.memory[len(self.memory)-1] = chosen_sample
+		self.prioritySum -= chosen_sample.td_error
 
+		return chosen_sample, rank
 
+	def update(self, state, action, reward, next_state, new_td_error):
+		"""
+		Similar to push function, except that the updated sample is added to the queue as last element.
+		At the same time, keep track of the total priority value in the replay memory.
+		"""
+		self.memory[len(self.memory)-1] = Experience(state, action, reward, next_state, new_td_error)
+		self.prioritySum += new_td_error
+
+		if len(self.memory) == 2:
+			self.minPriority = td_error
+			self.maxPriority = td_error
+
+		elif td_error < self.minPriority:
+			self.minPriority = td_error
+
+		elif td_error > self.maxPriority:
+			self.maxPriority = td_error
+
+	def get_max_weight(self, beta):
+		return (1/(len(self.memory)-1)) ** beta
 
 	def __len__(self):
 		return len(self.memory)
+
+	def get_minPriority(self):
+		return self.minPriority
+
+	def pop(self):
+		return self.memory[1]
+
+	def get_experience(self, index):
+		return self.memory[index]
+
+	def get_maxPriority(self):
+		return self.maxPriority
 
 

@@ -1,14 +1,14 @@
 import cv2
 import gym
 import random
+import numpy as np
 
 import torch
 from torch.autograd import Variable
 
-import numpy as np
-
-
 from replay_memory import ExpReplay
+from rank_based_prioritized_replay import RankBasedPrioritizedReplay, Experience
+from ddqn_rankPriority_learn import ddqn_compute_y
 
 use_cuda = torch.cuda.is_available()
 FloatTensor = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
@@ -195,5 +195,76 @@ def get_index_from_checkpoint_file(checkpoint):
 	chck_index = chck_filename_key[2]
 
 	return int(chck_index)
+
+def initialize_rank_replay(env, rp_start, rp_size, frames_per_state, 
+	model, target, gamma):
+
+	exp_replay = RankBasedPrioritizedReplay(rp_size)
+	episodes_count = 0
+	env.reset()
+	num_actions = env.action_space.n
+
+	current_state, _, _, _ = play_game(env, frames_per_state)
+
+	while episodes_count < rp_start:
+
+		action = LongTensor([[random.randrange(num_actions)]])
+		curr_obs, reward, done, _ = play_game(env, frames_per_state, action[0][0])
+		reward = Tensor([[reward]])
+
+		current_state_ex = np.expand_dims(current_state, 0)
+		curr_obs_ex = np.expand_dims(curr_obs, 0)
+		action = action.unsqueeze(0)
+
+		batch = Experience(current_state_ex, action, reward, curr_obs_ex, 0)
+
+		#compute td-error for one sample
+		td_error = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma).data.cpu().numpy()
+		
+		exp_replay.push(current_state, action, reward, curr_obs, td_error)
+
+		current_state = curr_obs
+		episodes_count+= 1
+
+		if done:
+			env.reset()
+			current_state, _, _, _ = play_game(env, frames_per_state)
+
+	# print(len(exp_replay))
+	exp_replay.sort()
+
+	print('Rank Prioritized Replay initialized for training...')
+	return exp_replay
+
+def initialize_rank_replay_resume(env, rp_start, rp_size, frames_per_state, 
+	model, target, gamma, batch_size):
+	exp_replay = RankBasedPrioritizedReplay(rp_size)
+	episodes_count = 0
+	env.reset()
+	num_actions = env.action_space.n
+
+	current_state, _, _, _ = play_game(env, frames_per_state)
+
+	while episodes_count < rp_start:
+
+		action = get_greedy_action(model, current_state)
+		curr_obs, reward, done, _ = play_game(env, frames_per_state, action[0][0])
+		reward = Tensor([[reward]])
+
+		#compute td-error for one sample
+		td_error = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma)
+		
+		exp_replay.push(current_state, action, reward, curr_obs, td_error)
+
+		current_state = curr_obs
+		episodes_count+= 1
+
+		if done:
+			env.reset()
+			current_state, _, _, _ = play_game(env, frames_per_state)
+			
+
+	print('Rank Prioritized Replay re-initialized for training...')
+	return exp_replay
 
 
