@@ -132,7 +132,7 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 	rewards_per_episode = 0
 	rewards_duration = []
 	loss_per_epoch = []
-
+	weight_change = 0.0
 	
 	current_state, _, _, _ = util.play_game(env, frames_per_state)
 	print('Starting training...')
@@ -149,7 +149,7 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 			action = LongTensor([[random.randrange(num_actions)]])
 
 		else:
-			action = get_greedy_action(model, current_state)
+			action = util.get_greedy_action(model, current_state)
 
 		curr_obs, reward, done, _ = util.play_game(env, frames_per_state, action[0][0])
 
@@ -159,78 +159,98 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 		current_state_ex = np.expand_dims(current_state, 0)
 		curr_obs_ex = np.expand_dims(curr_obs, 0)
 		action = action.unsqueeze(0)
-
 		batch = Experience(current_state_ex, action, reward, curr_obs_ex, 0)
 
 		#compute td-error for one sample
 		td_error = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma).data.cpu().numpy()
-		
+		td_error = np.absolute(td_error)
 		exp_replay.push(current_state, action, reward, curr_obs, td_error)
 		current_state = curr_obs
 
-		break
+		weight_change = []
+		
 
-		# for j in range(batch_size):
+		for j in range(batch_size):
 
-		# 	#Get a random sample
-		# 	obs_sample, obs_rank = exp_replay.sample()
+			#Get a random sample
+			obs_sample, obs_rank = exp_replay.sample()
 			
-		# 	max_weight = exp_replay.get_max_weight(inital_beta)
-		# 	p_j = 1/obs_rank
-		# 	curr_weight = ((1/len(exp_replay))*(1/p_j))**inital_beta
-		# 	curr_weight = curr_weight/max_weight
+			max_weight = exp_replay.get_max_weight(inital_beta)
+			p_j = 1/obs_rank
+			curr_weight = ((1/len(exp_replay))*(1/p_j))**inital_beta
+			curr_weight = curr_weight/max_weight
 
-		# 	print(obs_sample.state.shape)
-		# 	print(obs_sample.next_state.shape)
+			current_state_ex = np.expand_dims(obs_sample.state, 0)
+			curr_obs_ex = np.expand_dims(obs_sample.next_state, 0)
+			action = obs_sample.action
+			batch = Experience(current_state_ex, action, reward, curr_obs_ex, 0)
 
-		# 	# td_error = ddqn_compute_y(batch_size=1, batch=obs_sample, model=model, target=target, gamma=gamma).data.cpu().numpy()
-		# 	# exp_replay.update(obs_sample.state, obs_sample.action, obs_sample.reward, obs_sample.next_state, td_error)
-			
-		# 	loss = ddqn_compute_y(obs_sample, batch_size, model, target, gamma)
-		# 	optimizer.zero_grad()
-		# 	loss.backward()
+			#compute td-error for one sample
+			loss = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma)
+			td_error = loss.data.cpu().numpy()
+			td_error_abs = np.absolute(td_error)
+			exp_replay.update(obs_sample.state, obs_sample.action, obs_sample.reward, obs_sample.next_state, td_error_abs)
 
-		# 	for param in model.parameters():
-		# 		param.grad.data.clamp_(-1,1)
+			optimizer.zero_grad()
+			loss.backward()
 
-		# 	optimizer.step()
-		# 	loss_per_epoch.append(loss.data.cpu().numpy())
+			if j == 0:
+				for param in model.parameters():
+					tmp = curr_weight * td_error * param.grad.data.cpu().numpy()
+					weight_change.append(tmp)
 
-	# 	frames_count+= 1
-	# 	frames_per_episode+= frames_per_state
+			else:
+				paramIndex = 0
+				for param in model.parameters():
+					tmp = weight_change[paramIndex] * curr_weight * td_error * param.grad.data.cpu().numpy()
+					weight_change[paramIndex] = tmp
+					paramIndex += 1
 
-	# 	if done:
-	# 		rewards_duration.append(rewards_per_episode)
-	# 		rewards_per_episode = 0
-	# 		frames_per_episode=1
-	# 		episodes_count+=1
-	# 		env.reset()
-	# 		current_state, _, _, _ = util.play_game(env, frames_per_state)
+		#update weights
+		paramIndex = 0
+		for param in model.parameters():
+			temp1 = torch.from_numpy(weight_change[paramIndex]).mul(optimizer_constructor.kwargs['lr']).type(Tensor)
+			temp2 = param.data.type(Tensor)
+			temp3 = temp1 + temp2
+			param.data = temp3
+			paramIndex += 1
 
-	# 		if episodes_count % 100 == 0:
-	# 			avg_episode_reward = sum(rewards_duration)/100.0
-	# 			avg_reward_content = 'Episode from', episodes_count-99, ' to ', episodes_count, ' has an average of ', avg_episode_reward, ' reward and loss of ', sum(loss_per_epoch)
-	# 			print(avg_reward_content)
-	# 			logging.info(avg_reward_content)
-	# 			rewards_duration = []
-	# 			loss_per_epoch = []
+		frames_count+= 1
+		frames_per_episode+= frames_per_state
 
-	# 	# update weights of target network for every TARGET_UPDATE_FREQ steps
-	# 	if frames_count % target_update_steps == 0:
-	# 		target.load_state_dict(model.state_dict())
-	# 		# print('weights updated at frame no. ', frames_count)
+		if done:
+			rewards_duration.append(rewards_per_episode)
+			rewards_per_episode = 0
+			frames_per_episode=1
+			episodes_count+=1
+			env.reset()
+			current_state, _, _, _ = util.play_game(env, frames_per_state)
+
+			if episodes_count % 100 == 0:
+				avg_episode_reward = sum(rewards_duration)/100.0
+				avg_reward_content = 'Episode from', episodes_count-99, ' to ', episodes_count, ' has an average of ', avg_episode_reward, ' reward and loss of ', sum(loss_per_epoch)
+				print(avg_reward_content)
+				logging.info(avg_reward_content)
+				rewards_duration = []
+				loss_per_epoch = []
+
+		# update weights of target network for every TARGET_UPDATE_FREQ steps
+		if frames_count % target_update_steps == 0:
+			target.load_state_dict(model.state_dict())
+			# print('weights updated at frame no. ', frames_count)
 
 
-	# 	#Save weights every 250k frames
-	# 	if frames_count % 250000 == 0:
-	# 		torch.save(model.state_dict(), output_directory+model_type+'/weights_'+ str(frames_count)+'.pth')
+		#Save weights every 250k frames
+		if frames_count % 250000 == 0:
+			torch.save(model.state_dict(), output_directory+model_type+'/weights_'+ str(frames_count)+'.pth')
 
 
-	# 	#Print frame count for every 1000000 (one million) frames:
-	# 	if frames_count % 1000000 == 0:
-	# 		training_update = 'frame count: ', frames_count, 'episode count: ', episodes_count, 'epsilon: ', epsilon
-	# 		print(training_update)
-	# 		logging.info(training_update)
+		#Print frame count for every 1000000 (one million) frames:
+		if frames_count % 1000000 == 0:
+			training_update = 'frame count: ', frames_count, 'episode count: ', episodes_count, 'epsilon: ', epsilon
+			print(training_update)
+			logging.info(training_update)
+			exp_replay.sort()
 
 
 

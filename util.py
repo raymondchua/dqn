@@ -220,7 +220,7 @@ def initialize_rank_replay(env, rp_start, rp_size, frames_per_state,
 
 		#compute td-error for one sample
 		td_error = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma).data.cpu().numpy()
-		
+		td_error = np.absolute(td_error)
 		exp_replay.push(current_state, action, reward, curr_obs, td_error)
 
 		current_state = curr_obs

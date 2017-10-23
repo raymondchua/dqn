@@ -107,7 +107,6 @@ class RankBasedPrioritizedReplay(object):
 		"""
 		maxPriority = math.floor(self.prioritySum)
 		randPriority = random.uniform(0, maxPriority)
-		print('chosen: ', randPriority)
 
 		for i in range(1, len(self.memory)):
 			rank = i
@@ -139,11 +138,11 @@ class RankBasedPrioritizedReplay(object):
 			self.minPriority = td_error
 			self.maxPriority = td_error
 
-		elif td_error < self.minPriority:
-			self.minPriority = td_error
+		elif new_td_error < self.minPriority:
+			self.minPriority = new_td_error
 
-		elif td_error > self.maxPriority:
-			self.maxPriority = td_error
+		elif new_td_error > self.maxPriority:
+			self.maxPriority = new_td_error
 
 	def get_max_weight(self, beta):
 		return (1/(len(self.memory)-1)) ** beta
