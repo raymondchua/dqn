@@ -60,7 +60,7 @@ def ddqn_compute_y(batch_size=32, batch=None, model=None, target=None, gamma=0.9
 	reward_batch = Variable(torch.cat(batch.reward)) 
 	action_batch = Variable(torch.cat(batch.action))
 
-	# #compute Q(s,a) based on the action taken
+	#compute Q(s,a) based on the action taken
 	state_action_values = model(state_batch).gather(1,action_batch)
 
 	model_actions = model(non_final_next_states).data.max(1)[1].view(batch_size,1)
@@ -123,11 +123,6 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 
 	target.load_state_dict(model.state_dict())
 
-	temp = exp_replay.pop()
-
-	print(temp.td_error)
-	print(exp_replay.get_maxPriority())
-
 	optimizer = optimizer_constructor.type(model.parameters(), lr=optimizer_constructor.kwargs['lr'],
 		alpha=optimizer_constructor.kwargs['alpha'], eps=optimizer_constructor.kwargs['eps'] )
 
@@ -169,23 +164,27 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 
 		#compute td-error for one sample
 		td_error = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma).data.cpu().numpy()
+		
 		exp_replay.push(current_state, action, reward, curr_obs, td_error)
-
 		current_state = curr_obs
 
-		for j in range(batch_size):
-
-			#Get a random sample
-			obs_sample, obs_rank = exp_replay.sample()
-			
-			max_weight = exp_replay.get_max_weight(inital_beta)
-			p_j = 1/obs_rank
-			curr_weight = ((1/len(exp_replay))*(1/p_j))**inital_beta
-			curr_weight = curr_weight/max_weight
-
-			print(obs_rank)
-
 		break
+
+		# for j in range(batch_size):
+
+		# 	#Get a random sample
+		# 	obs_sample, obs_rank = exp_replay.sample()
+			
+		# 	max_weight = exp_replay.get_max_weight(inital_beta)
+		# 	p_j = 1/obs_rank
+		# 	curr_weight = ((1/len(exp_replay))*(1/p_j))**inital_beta
+		# 	curr_weight = curr_weight/max_weight
+
+		# 	print(obs_sample.state.shape)
+		# 	print(obs_sample.next_state.shape)
+
+		# 	# td_error = ddqn_compute_y(batch_size=1, batch=obs_sample, model=model, target=target, gamma=gamma).data.cpu().numpy()
+		# 	# exp_replay.update(obs_sample.state, obs_sample.action, obs_sample.reward, obs_sample.next_state, td_error)
 			
 		# 	loss = ddqn_compute_y(obs_sample, batch_size, model, target, gamma)
 		# 	optimizer.zero_grad()

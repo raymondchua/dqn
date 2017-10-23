@@ -107,17 +107,18 @@ class RankBasedPrioritizedReplay(object):
 		"""
 		maxPriority = math.floor(self.prioritySum)
 		randPriority = random.uniform(0, maxPriority)
-		rank = 1
+		print('chosen: ', randPriority)
 
 		for i in range(1, len(self.memory)):
+			rank = i
 			current = self.memory[i]
-			if current.td_error <= randPriority:
+			if randPriority <= current.td_error :
 				chosen_sample = current
 				chosen_sample_index = i 
 				break
 
 			randPriority -= current.td_error
-			rank += 1
+		
 
 		#swap selected sample with the last sample in the array
 		self.memory[i] = self.memory[len(self.memory)-1]
