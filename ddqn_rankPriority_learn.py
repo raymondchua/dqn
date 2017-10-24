@@ -91,7 +91,7 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 	"""
 	
 	gym.undo_logger_setup()
-	logging.basicConfig(filename='ddqn_training.log',level=logging.INFO)
+	logging.basicConfig(filename='ddqn_rank_training.log',level=logging.INFO)
 	num_actions = env.action_space.n
 	env.reset()
 	
@@ -188,6 +188,7 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 			#compute td-error for one sample
 			loss = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma)
 			td_error = loss.data.cpu().numpy()
+			print('absolute: ', td_error)
 			td_error_abs = np.absolute(td_error)
 			exp_replay.update(obs_sample.state, obs_sample.action, obs_sample.reward, obs_sample.next_state, td_error_abs)
 
@@ -242,7 +243,7 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 
 		#Save weights every 250k frames
 		if frames_count % 250000 == 0:
-			torch.save(model.state_dict(), output_directory+model_type+'/weights_'+ str(frames_count)+'.pth')
+			torch.save(model.state_dict(), output_directory+model_type+'/rank_weights_'+ str(frames_count)+'.pth')
 
 
 		#Print frame count for every 1000000 (one million) frames:

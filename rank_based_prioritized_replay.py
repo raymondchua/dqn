@@ -105,6 +105,7 @@ class RankBasedPrioritizedReplay(object):
 		"""
 		Extract one random sample weighted by priority values from the replay memory.
 		"""
+		print(self.prioritySum)
 		maxPriority = math.floor(self.prioritySum)
 		randPriority = random.uniform(0, maxPriority)
 
