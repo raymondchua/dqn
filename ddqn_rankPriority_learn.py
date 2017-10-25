@@ -163,12 +163,14 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 
 		#compute td-error for one sample
 		td_error = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma).data.cpu().numpy()
-		td_error = np.absolute(td_error)
+		print(td_error)
+		# td_error = np.absolute(td_error)
 		exp_replay.push(current_state, action, reward, curr_obs, td_error)
 		current_state = curr_obs
 
-		weight_change = []
-		
+		weight_change = torch.zeros(batch_size)
+
+		gradient_list = []
 
 		for j in range(batch_size):
 
@@ -176,6 +178,7 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 			obs_sample, obs_rank = exp_replay.sample()
 			
 			max_weight = exp_replay.get_max_weight(inital_beta)
+			print(max_weight)
 			p_j = 1/obs_rank
 			curr_weight = ((1/len(exp_replay))*(1/p_j))**inital_beta
 			curr_weight = curr_weight/max_weight
@@ -188,22 +191,30 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 			#compute td-error for one sample
 			loss = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma)
 			td_error = loss.data.cpu().numpy()
-			print('absolute: ', td_error)
-			td_error_abs = np.absolute(td_error)
-			exp_replay.update(obs_sample.state, obs_sample.action, obs_sample.reward, obs_sample.next_state, td_error_abs)
+			# td_error_abs = np.absolute(td_error)
+			print(td_error)
+			exp_replay.update(obs_sample.state, obs_sample.action, obs_sample.reward, obs_sample.next_state, td_error)
 
 			optimizer.zero_grad()
 			loss.backward()
 
+			for param in model.parameters():
+				# grad_shape = param.grad.size()
+				# print('gradient: ', grad_shape)
+				gradient_list.append(param.grad.data)
+
+			print(len(gradient_list))
+
 			if j == 0:
 				for param in model.parameters():
+
 					tmp = curr_weight * td_error * param.grad.data.cpu().numpy()
-					weight_change.append(tmp)
+					weight_change[j] = tmp
 
 			else:
 				paramIndex = 0
 				for param in model.parameters():
-					tmp = weight_change[paramIndex] * curr_weight * td_error * param.grad.data.cpu().numpy()
+					tmp = weight_change[paramIndex] * curr_weight * td_error * param.grad.data
 					weight_change[paramIndex] = tmp
 					paramIndex += 1
 
