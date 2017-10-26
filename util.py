@@ -1,3 +1,4 @@
+import os
 import cv2
 import gym
 import random
@@ -235,6 +236,8 @@ def initialize_rank_replay(env, rp_start, rp_size, frames_per_state,
 	print('Rank Prioritized Replay initialized for training...')
 	return exp_replay
 
+
+
 # def initialize_rank_replay_resume(env, rp_start, rp_size, frames_per_state, 
 # 	model, target, gamma, batch_size):
 # 	exp_replay = RankBasedPrioritizedReplay(rp_size)
@@ -266,4 +269,9 @@ def initialize_rank_replay(env, rp_start, rp_size, frames_per_state,
 # 	print('Rank Prioritized Replay re-initialized for training...')
 # 	return exp_replay
 
-
+def make_sure_path_exists(path):
+    try:
+        os.makedirs(path)
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise

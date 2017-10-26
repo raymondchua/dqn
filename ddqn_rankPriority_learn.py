@@ -249,7 +249,8 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 
 		#Save weights every 250k frames
 		if frames_count % 250000 == 0:
-			torch.save(model.state_dict(), output_directory+model_type+'/rank_weights_'+ str(frames_count)+'.pth')
+			util.make_sure_path_exists(output_directory+model_type+'/')
+			torch.save(model.state_dict(), 'rank_weights_'+ str(frames_count)+'.pth')
 
 
 		#Print frame count and sort experience replay for every 1000000 (one million) frames:
