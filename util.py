@@ -219,8 +219,7 @@ def initialize_rank_replay(env, rp_start, rp_size, frames_per_state,
 		batch = Experience(current_state_ex, action, reward, curr_obs_ex, 0)
 
 		#compute td-error for one sample
-		td_error = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma).data.cpu().numpy()
-		# td_error = np.absolute(td_error)
+		td_error = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma)
 		exp_replay.push(current_state, action, reward, curr_obs, td_error)
 
 		current_state = curr_obs
@@ -236,35 +235,35 @@ def initialize_rank_replay(env, rp_start, rp_size, frames_per_state,
 	print('Rank Prioritized Replay initialized for training...')
 	return exp_replay
 
-def initialize_rank_replay_resume(env, rp_start, rp_size, frames_per_state, 
-	model, target, gamma, batch_size):
-	exp_replay = RankBasedPrioritizedReplay(rp_size)
-	episodes_count = 0
-	env.reset()
-	num_actions = env.action_space.n
+# def initialize_rank_replay_resume(env, rp_start, rp_size, frames_per_state, 
+# 	model, target, gamma, batch_size):
+# 	exp_replay = RankBasedPrioritizedReplay(rp_size)
+# 	episodes_count = 0
+# 	env.reset()
+# 	num_actions = env.action_space.n
 
-	current_state, _, _, _ = play_game(env, frames_per_state)
+# 	current_state, _, _, _ = play_game(env, frames_per_state)
 
-	while episodes_count < rp_start:
+# 	while episodes_count < rp_start:
 
-		action = get_greedy_action(model, current_state)
-		curr_obs, reward, done, _ = play_game(env, frames_per_state, action[0][0])
-		reward = Tensor([[reward]])
+# 		action = get_greedy_action(model, current_state)
+# 		curr_obs, reward, done, _ = play_game(env, frames_per_state, action[0][0])
+# 		reward = Tensor([[reward]])
 
-		#compute td-error for one sample
-		td_error = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma)
+# 		#compute td-error for one sample
+# 		td_error = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma)
 		
-		exp_replay.push(current_state, action, reward, curr_obs, td_error)
+# 		exp_replay.push(current_state, action, reward, curr_obs, td_error)
 
-		current_state = curr_obs
-		episodes_count+= 1
+# 		current_state = curr_obs
+# 		episodes_count+= 1
 
-		if done:
-			env.reset()
-			current_state, _, _, _ = play_game(env, frames_per_state)
+# 		if done:
+# 			env.reset()
+# 			current_state, _, _, _ = play_game(env, frames_per_state)
 			
 
-	print('Rank Prioritized Replay re-initialized for training...')
-	return exp_replay
+# 	print('Rank Prioritized Replay re-initialized for training...')
+# 	return exp_replay
 
 

@@ -1,5 +1,5 @@
 from __future__ import print_function, division
-
+import copy
 import cv2
 import gym
 from gym import wrappers
@@ -162,26 +162,26 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 		batch = Experience(current_state_ex, action, reward, curr_obs_ex, 0)
 
 		#compute td-error for one sample
-		td_error = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma).data.cpu().numpy()
-		print(td_error)
-		# td_error = np.absolute(td_error)
+		td_error = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma)
 		exp_replay.push(current_state, action, reward, curr_obs, td_error)
 		current_state = curr_obs
 
-		weight_change = torch.zeros(batch_size)
+		params_grad = copy.deepcopy(list(model.parameters()))
+		
 
-		gradient_list = []
+		# weight_change = torch.zeros(batch_size)
+
+		# gradient_list = []
 
 		for j in range(batch_size):
 
 			#Get a random sample
 			obs_sample, obs_rank = exp_replay.sample()
-			
 			max_weight = exp_replay.get_max_weight(inital_beta)
-			print(max_weight)
 			p_j = 1/obs_rank
 			curr_weight = ((1/len(exp_replay))*(1/p_j))**inital_beta
 			curr_weight = curr_weight/max_weight
+			curr_weight = torch.from_numpy(curr_weight).type(Tensor)
 
 			current_state_ex = np.expand_dims(obs_sample.state, 0)
 			curr_obs_ex = np.expand_dims(obs_sample.next_state, 0)
@@ -190,43 +190,38 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 
 			#compute td-error for one sample
 			loss = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma)
-			td_error = loss.data.cpu().numpy()
-			# td_error_abs = np.absolute(td_error)
-			print(td_error)
-			exp_replay.update(obs_sample.state, obs_sample.action, obs_sample.reward, obs_sample.next_state, td_error)
+			exp_replay.update(obs_sample.state, obs_sample.action, obs_sample.reward, obs_sample.next_state, loss)
 
 			optimizer.zero_grad()
 			loss.backward()
 
-			for param in model.parameters():
-				# grad_shape = param.grad.size()
-				# print('gradient: ', grad_shape)
-				gradient_list.append(param.grad.data)
-
-			print(len(gradient_list))
-
 			if j == 0:
+				paramIndex = 0
 				for param in model.parameters():
-
-					tmp = curr_weight * td_error * param.grad.data.cpu().numpy()
-					weight_change[j] = tmp
+					tmp = curr_weight * loss.data * param.grad.data
+					params_grad[paramIndex] = tmp
+					paramIndex += 1
+					
 
 			else:
 				paramIndex = 0
 				for param in model.parameters():
-					tmp = weight_change[paramIndex] * curr_weight * td_error * param.grad.data
-					weight_change[paramIndex] = tmp
+					tmp = curr_weight * loss.data * param.grad.data
+					result = tmp + params_grad[paramIndex]
 					paramIndex += 1
-
+				
+					
+	
 		#update weights
 		paramIndex = 0
 		for param in model.parameters():
-			temp1 = torch.from_numpy(weight_change[paramIndex]).mul(optimizer_constructor.kwargs['lr']).type(Tensor)
-			temp2 = param.data.type(Tensor)
-			temp3 = temp1 + temp2
-			param.data = temp3
+			gradient_update = params_grad[paramIndex].mul(optimizer_constructor.kwargs['lr']).type(Tensor)
+			layer_params = param.data
+			layer_params_learned = layer_params + gradient_update
 			paramIndex += 1
+			param.data = layer_params_learned
 
+		
 		frames_count+= 1
 		frames_per_episode+= frames_per_state
 
@@ -257,7 +252,7 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 			torch.save(model.state_dict(), output_directory+model_type+'/rank_weights_'+ str(frames_count)+'.pth')
 
 
-		#Print frame count for every 1000000 (one million) frames:
+		#Print frame count and sort experience replay for every 1000000 (one million) frames:
 		if frames_count % 1000000 == 0:
 			training_update = 'frame count: ', frames_count, 'episode count: ', episodes_count, 'epsilon: ', epsilon
 			print(training_update)

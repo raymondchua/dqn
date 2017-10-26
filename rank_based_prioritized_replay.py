@@ -38,8 +38,8 @@ class RankBasedPrioritizedReplay(object):
 		self.position = 1
 		self.prioritySum = 0
 		self.memory.append(None)
-		self.minPriority = 0
-		self.maxPriority = 0
+		self.minPriority = None
+		self.maxPriority = None
 
 	def push(self, state, action, reward, next_state, td_error):
 		"""
@@ -50,24 +50,24 @@ class RankBasedPrioritizedReplay(object):
 			self.memory.append(None)
 			self.memory[self.position] = Experience(state, action, reward, next_state, td_error)
 			self.position = (self.position + 1) % self.capacity
-			self.prioritySum += td_error
+			self.prioritySum += td_error.data.cpu().numpy()
 
 		else:
 			temp = self.memory[self.position]
 			self.memory[self.position] = Experience(state, action, reward, next_state, td_error)
 			self.position = (self.position + 1) % self.capacity
-			self.prioritySum -= temp.td_error
-			self.prioritySum += td_error
+			self.prioritySum -= temp.td_error.data.cpu().numpy()
+			self.prioritySum += td_error.data.cpu().numpy()
 
 		if len(self.memory) == 2:
-			self.minPriority = td_error
-			self.maxPriority = td_error
+			self.minPriority = td_error.data.cpu().numpy()
+			self.maxPriority = td_error.data.cpu().numpy()
 
-		elif td_error < self.minPriority:
-			self.minPriority = td_error
+		elif td_error.data.cpu().numpy() < self.minPriority:
+			self.minPriority = td_error.data.cpu().numpy()
 
-		elif td_error > self.maxPriority:
-			self.maxPriority = td_error
+		elif td_error.data.cpu().numpy() > self.maxPriority:
+			self.maxPriority = td_error.data.cpu().numpy()
 
 
 	def sort(self):
@@ -80,7 +80,7 @@ class RankBasedPrioritizedReplay(object):
 		while(i * 2) <= len(self.memory):
 			temp_maxChild = self.maxChild(i)
 
-			if self.memory[i].td_error < self.memory[temp_maxChild].td_error:
+			if self.memory[i].td_error.data.cpu().numpy() < self.memory[temp_maxChild].td_error.data.cpu().numpy():
 				tmp = self.memory[i]
 				self.memory[i] = self.memory[temp_maxChild]
 				self.memory[temp_maxChild] = tmp
@@ -94,7 +94,7 @@ class RankBasedPrioritizedReplay(object):
 
 		else:
 
-			if self.memory[i*2].td_error > self.memory[(i*2)+1].td_error:
+			if self.memory[i*2].td_error.data.cpu().numpy() > self.memory[(i*2)+1].td_error.data.cpu().numpy():
 				return i * 2
 
 			else:
@@ -111,18 +111,18 @@ class RankBasedPrioritizedReplay(object):
 		for i in range(1, len(self.memory)):
 			rank = i
 			current = self.memory[i]
-			if randPriority <= current.td_error :
+			if randPriority <= current.td_error.data.cpu().numpy() :
 				chosen_sample = current
 				chosen_sample_index = i 
 				break
 
-			randPriority -= current.td_error
+			randPriority -= current.td_error.data.cpu().numpy()
 		
 
 		#swap selected sample with the last sample in the array
 		self.memory[i] = self.memory[len(self.memory)-1]
 		self.memory[len(self.memory)-1] = chosen_sample
-		self.prioritySum -= chosen_sample.td_error
+		self.prioritySum -= chosen_sample.td_error.data.cpu().numpy()
 
 		return chosen_sample, rank
 
@@ -132,20 +132,20 @@ class RankBasedPrioritizedReplay(object):
 		At the same time, keep track of the total priority value in the replay memory.
 		"""
 		self.memory[len(self.memory)-1] = Experience(state, action, reward, next_state, new_td_error)
-		self.prioritySum += new_td_error
+		self.prioritySum += new_td_error.data.cpu().numpy()
 
 		if len(self.memory) == 2:
-			self.minPriority = td_error
-			self.maxPriority = td_error
+			self.minPriority = td_error.data.cpu().numpy()
+			self.maxPriority = td_error.data.cpu().numpy()
 
-		elif new_td_error < self.minPriority:
-			self.minPriority = new_td_error
+		elif new_td_error.data.cpu().numpy() < self.minPriority:
+			self.minPriority = new_td_error.data.cpu().numpy()
 
-		elif new_td_error > self.maxPriority:
-			self.maxPriority = new_td_error
+		elif new_td_error.data.cpu().numpy() > self.maxPriority:
+			self.maxPriority = new_td_error.data.cpu().numpy()
 
 	def get_max_weight(self, beta):
-		return (1/(len(self.memory)-1)) ** beta
+		return ((1/(len(self.memory))) * 1/(self.minPriority/self.prioritySum)) ** beta
 
 	def __len__(self):
 		return len(self.memory)
