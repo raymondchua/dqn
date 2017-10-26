@@ -181,8 +181,8 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 			p_j = 1/obs_rank
 			curr_weight = ((1/len(exp_replay))*(1/p_j))**inital_beta
 			curr_weight = curr_weight/max_weight
-			curr_weight = torch.from_numpy(curr_weight).type(Tensor)
-
+			curr_weight = curr_weight.data.type(Tensor)
+			
 			current_state_ex = np.expand_dims(obs_sample.state, 0)
 			curr_obs_ex = np.expand_dims(obs_sample.next_state, 0)
 			action = obs_sample.action

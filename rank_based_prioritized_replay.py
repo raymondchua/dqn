@@ -20,6 +20,14 @@ import torchvision.transforms as T
 
 Experience = namedtuple('Experience', ('state', 'action', 'reward','next_state', 'td_error'))
 
+# if gpu is to be used
+use_cuda = torch.cuda.is_available()
+FloatTensor = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
+IntTensor = torch.cuda.IntTensor if use_cuda else torch.IntTensor
+LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
+ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
+Tensor = FloatTensor
+
 class RankBasedPrioritizedReplay(object):
 	"""
 	Implementation of Rank Based Prioritized Replay.
@@ -50,24 +58,24 @@ class RankBasedPrioritizedReplay(object):
 			self.memory.append(None)
 			self.memory[self.position] = Experience(state, action, reward, next_state, td_error)
 			self.position = (self.position + 1) % self.capacity
-			self.prioritySum += td_error.data.cpu().numpy()
+			self.prioritySum += td_error
 
 		else:
 			temp = self.memory[self.position]
 			self.memory[self.position] = Experience(state, action, reward, next_state, td_error)
 			self.position = (self.position + 1) % self.capacity
-			self.prioritySum -= temp.td_error.data.cpu().numpy()
-			self.prioritySum += td_error.data.cpu().numpy()
+			self.prioritySum -= temp.td_error
+			self.prioritySum += td_error
 
 		if len(self.memory) == 2:
-			self.minPriority = td_error.data.cpu().numpy()
-			self.maxPriority = td_error.data.cpu().numpy()
+			self.minPriority = td_error
+			self.maxPriority = td_error
 
-		elif td_error.data.cpu().numpy() < self.minPriority:
-			self.minPriority = td_error.data.cpu().numpy()
+		elif (td_error < self.minPriority).data.all():
+			self.minPriority = td_error
 
-		elif td_error.data.cpu().numpy() > self.maxPriority:
-			self.maxPriority = td_error.data.cpu().numpy()
+		elif (td_error > self.maxPriority).data.all():
+			self.maxPriority = td_error
 
 
 	def sort(self):
@@ -80,7 +88,7 @@ class RankBasedPrioritizedReplay(object):
 		while(i * 2) <= len(self.memory):
 			temp_maxChild = self.maxChild(i)
 
-			if self.memory[i].td_error.data.cpu().numpy() < self.memory[temp_maxChild].td_error.data.cpu().numpy():
+			if (self.memory[i].td_error < self.memory[temp_maxChild].td_error).data.all():
 				tmp = self.memory[i]
 				self.memory[i] = self.memory[temp_maxChild]
 				self.memory[temp_maxChild] = tmp
@@ -94,7 +102,7 @@ class RankBasedPrioritizedReplay(object):
 
 		else:
 
-			if self.memory[i*2].td_error.data.cpu().numpy() > self.memory[(i*2)+1].td_error.data.cpu().numpy():
+			if (self.memory[i*2].td_error > self.memory[(i*2)+1].td_error).data.all():
 				return i * 2
 
 			else:
@@ -105,24 +113,27 @@ class RankBasedPrioritizedReplay(object):
 		"""
 		Extract one random sample weighted by priority values from the replay memory.
 		"""
-		maxPriority = math.floor(self.prioritySum)
-		randPriority = random.uniform(0, maxPriority)
-
+		maxPriority = torch.floor(self.prioritySum).data.type(Tensor)
+		randNum = torch.rand(1).type(Tensor)
+		randPriority = randNum * maxPriority
+		
 		for i in range(1, len(self.memory)):
 			rank = i
 			current = self.memory[i]
-			if randPriority <= current.td_error.data.cpu().numpy() :
+			td_error_float = current.td_error.data.type(Tensor)
+		
+			if (randPriority <= td_error_float).all() :
 				chosen_sample = current
 				chosen_sample_index = i 
 				break
 
-			randPriority -= current.td_error.data.cpu().numpy()
+			randPriority -= current.td_error.data.type(Tensor)
 		
 
 		#swap selected sample with the last sample in the array
 		self.memory[i] = self.memory[len(self.memory)-1]
 		self.memory[len(self.memory)-1] = chosen_sample
-		self.prioritySum -= chosen_sample.td_error.data.cpu().numpy()
+		self.prioritySum -= chosen_sample.td_error
 
 		return chosen_sample, rank
 
@@ -132,17 +143,17 @@ class RankBasedPrioritizedReplay(object):
 		At the same time, keep track of the total priority value in the replay memory.
 		"""
 		self.memory[len(self.memory)-1] = Experience(state, action, reward, next_state, new_td_error)
-		self.prioritySum += new_td_error.data.cpu().numpy()
+		self.prioritySum += new_td_error
 
 		if len(self.memory) == 2:
-			self.minPriority = td_error.data.cpu().numpy()
-			self.maxPriority = td_error.data.cpu().numpy()
+			self.minPriority = td_error
+			self.maxPriority = td_error
 
-		elif new_td_error.data.cpu().numpy() < self.minPriority:
-			self.minPriority = new_td_error.data.cpu().numpy()
+		elif (new_td_error < self.minPriority).data.all():
+			self.minPriority = new_td_error
 
-		elif new_td_error.data.cpu().numpy() > self.maxPriority:
-			self.maxPriority = new_td_error.data.cpu().numpy()
+		elif (new_td_error > self.maxPriority).data.all():
+			self.maxPriority = new_td_error
 
 	def get_max_weight(self, beta):
 		return ((1/(len(self.memory))) * 1/(self.minPriority/self.prioritySum)) ** beta
