@@ -166,7 +166,8 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 		exp_replay.push(current_state, action, reward, curr_obs, td_error)
 		current_state = curr_obs
 
-		params_grad = copy.deepcopy(list(model.parameters()))
+		# params_grad = copy.deepcopy(list(model.parameters()))
+		params_grad = []
 		
 
 		# weight_change = torch.zeros(batch_size)
@@ -199,7 +200,7 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 				paramIndex = 0
 				for param in model.parameters():
 					tmp = curr_weight * loss.data * param.grad.data
-					params_grad[paramIndex] = tmp
+					params_grad.append(tmp)
 					paramIndex += 1
 					
 
@@ -220,6 +221,8 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 			layer_params_learned = layer_params + gradient_update
 			paramIndex += 1
 			param.data = layer_params_learned
+
+		params_grad = None
 
 		
 		frames_count+= 1
