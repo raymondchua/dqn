@@ -41,7 +41,7 @@ class RankBasedPrioritizedReplay(object):
 	Memory index to begin from 1 so that we can use integer division by 2 for quick indexing. 
 	"""
 	def __init__(self, N):
-		self.capacity = N 
+		self.capacity = N
 		self.memory = []
 		self.position = 1
 		self.prioritySum = 0
@@ -57,13 +57,17 @@ class RankBasedPrioritizedReplay(object):
 		if(len(self.memory) < self.capacity):
 			self.memory.append(None)
 			self.memory[self.position] = Experience(state, action, reward, next_state, td_error)
-			self.position = (self.position + 1) % self.capacity
+			self.position = (self.position + 1) % (self.capacity)
+			if self.position == 0:
+				self.position += 1
 			self.prioritySum += td_error
 
 		else:
 			temp = self.memory[self.position]
 			self.memory[self.position] = Experience(state, action, reward, next_state, td_error)
-			self.position = (self.position + 1) % self.capacity
+			self.position = (self.position + 1) % (self.capacity)
+			if self.position == 0:
+				self.position += 1
 			self.prioritySum -= temp.td_error
 			self.prioritySum += td_error
 

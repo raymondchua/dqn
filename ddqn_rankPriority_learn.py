@@ -163,17 +163,11 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 
 		#compute td-error for one sample
 		td_error = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma)
+		td_error += 1e-4
 		exp_replay.push(current_state, action, reward, curr_obs, td_error)
 		current_state = curr_obs
 
-		# params_grad = copy.deepcopy(list(model.parameters()))
 		params_grad = []
-		
-
-		# weight_change = torch.zeros(batch_size)
-
-		# gradient_list = []
-
 		for j in range(batch_size):
 
 			#Get a random sample
@@ -190,45 +184,45 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 			batch = Experience(current_state_ex, action, reward, curr_obs_ex, 0)
 
 			#compute td-error for one sample
-			loss = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma)
-			exp_replay.update(obs_sample.state, obs_sample.action, obs_sample.reward, obs_sample.next_state, loss)
+			# loss = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma)
+			# exp_replay.update(obs_sample.state, obs_sample.action, obs_sample.reward, obs_sample.next_state, loss)
 
-			optimizer.zero_grad()
-			loss.backward()
+			# optimizer.zero_grad()
+			# loss.backward()
 
-			if j == 0:
-				paramIndex = 0
-				for param in model.parameters():
-					tmp = curr_weight * loss.data * param.grad.data
-					params_grad.append(tmp)
-					paramIndex += 1
+			# if j == 0:
+			# 	paramIndex = 0
+			# 	for param in model.parameters():
+			# 		tmp = curr_weight * loss.data * param.grad.data
+			# 		params_grad.append(tmp)
+			# 		paramIndex += 1
 					
 
-			else:
-				paramIndex = 0
-				for param in model.parameters():
-					tmp = curr_weight * loss.data * param.grad.data
-					params_grad[paramIndex] = tmp + params_grad[paramIndex]
-					paramIndex += 1
+			# else:
+			# 	paramIndex = 0
+			# 	for param in model.parameters():
+			# 		tmp = curr_weight * loss.data * param.grad.data
+			# 		params_grad[paramIndex] = tmp + params_grad[paramIndex]
+			# 		paramIndex += 1
 				
 					
 	
-		#update weights
-		paramIndex = 0
-		for param in model.parameters():
-			gradient_update = params_grad[paramIndex].mul(optimizer_constructor.kwargs['lr']).type(Tensor)
-			layer_params = param.data
-			layer_params_learned = layer_params + gradient_update
-			paramIndex += 1
-			param.data = layer_params_learned
+		# #update weights
+		# paramIndex = 0
+		# for param in model.parameters():
+		# 	gradient_update = params_grad[paramIndex].mul(optimizer_constructor.kwargs['lr']).type(Tensor)
+		# 	layer_params = param.data
+		# 	layer_params_learned = layer_params + gradient_update
+		# 	paramIndex += 1
+		# 	param.data = layer_params_learned
 
-		params_grad = None
 
 		
 		frames_count+= 1
 		frames_per_episode+= frames_per_state
 
 		if done:
+			print('Game ends!', rewards_per_episode)
 			rewards_duration.append(rewards_per_episode)
 			rewards_per_episode = 0
 			frames_per_episode=1
