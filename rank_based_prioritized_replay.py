@@ -44,10 +44,9 @@ class RankBasedPrioritizedReplay(object):
 		self.capacity = N
 		self.memory = []
 		self.position = 1
-		self.prioritySum = 0
 		self.memory.append(None)
-		self.minPriority = None
-		self.maxPriority = None
+		self.priorityWeights = torch.zeros(N).type(Tensor)
+
 
 	def push(self, state, action, reward, next_state, td_error):
 		"""
@@ -57,30 +56,18 @@ class RankBasedPrioritizedReplay(object):
 		if(len(self.memory) < self.capacity):
 			self.memory.append(None)
 			self.memory[self.position] = Experience(state, action, reward, next_state, td_error)
+			self.priorityWeights[self.position] = td_error.data[0]
 			self.position = (self.position + 1) % (self.capacity)
 			if self.position == 0:
 				self.position += 1
-			self.prioritySum += td_error
-
+			
 		else:
 			temp = self.memory[self.position]
 			self.memory[self.position] = Experience(state, action, reward, next_state, td_error)
+			self.priorityWeights[self.position] = td_error.data[0]
 			self.position = (self.position + 1) % (self.capacity)
 			if self.position == 0:
 				self.position += 1
-			self.prioritySum -= temp.td_error
-			self.prioritySum += td_error
-
-		if len(self.memory) == 2:
-			self.minPriority = td_error
-			self.maxPriority = td_error
-
-		elif (td_error < self.minPriority).data.all():
-			self.minPriority = td_error
-
-		elif (td_error > self.maxPriority).data.all():
-			self.maxPriority = td_error
-
 
 	def sort(self):
 		i = len(self.memory) // 2
@@ -100,7 +87,6 @@ class RankBasedPrioritizedReplay(object):
 			i = temp_maxChild
 
 	def maxChild(self, i):
-
 		if ((i*2) + 1) > (len(self.memory)-1):
 			return i * 2
 
@@ -113,54 +99,40 @@ class RankBasedPrioritizedReplay(object):
 				return (i * 2) + 1
 
 
-	def sample(self):
+	def normalize_weights(self):
+		self.priorityWeights = torch.div(self.priorityWeights,torch.sum(self.priorityWeights))
+
+
+
+
+	def sample(self, batch_size):
 		"""
 		Extract one random sample weighted by priority values from the replay memory.
 		"""
-		maxPriority = torch.floor(self.prioritySum).data.type(Tensor)
-		randNum = torch.rand(1).type(Tensor)
-		randPriority = randNum * maxPriority
-		
-		for i in range(1, len(self.memory)):
-			rank = i
-			current = self.memory[i]
-			td_error_float = current.td_error.data.type(Tensor)
-		
-			if (randPriority <= td_error_float).all() :
-				chosen_sample = current
-				chosen_sample_index = i 
-				break
+		samples_list = []
+		rank_list = []
+		priority_list = []
+		self.normalize_weights()
+		samples = torch.utils.data.sampler.WeightedRandomSampler(self.priorityWeights.tolist(), batch_size, replacement=False)
+		for sample in samples:
+			samples_list.append(self.memory[sample])
+			rank_list.append(sample)
+			priority_list.append(self.priorityWeights[sample])
 
-			randPriority -= current.td_error.data.type(Tensor)
-		
+		return samples_list, rank_list, priority_list
 
-		#swap selected sample with the last sample in the array
-		self.memory[i] = self.memory[len(self.memory)-1]
-		self.memory[len(self.memory)-1] = chosen_sample
-		self.prioritySum -= chosen_sample.td_error
-
-		return chosen_sample, rank
-
-	def update(self, state, action, reward, next_state, new_td_error):
+	def update(self, index, loss):
 		"""
-		Similar to push function, except that the updated sample is added to the queue as last element.
-		At the same time, keep track of the total priority value in the replay memory.
+		update the samples new td values
 		"""
-		self.memory[len(self.memory)-1] = Experience(state, action, reward, next_state, new_td_error)
-		self.prioritySum += new_td_error
+		curr_sample = self.memory[index]
+		self.memory[index] = Experience(curr_sample.state, curr_sample.action, curr_sample.reward, curr_sample.next_state, loss.data[0])
+		self.priorityWeights[index] = loss.data[0]
 
-		if len(self.memory) == 2:
-			self.minPriority = td_error
-			self.maxPriority = td_error
-
-		elif (new_td_error < self.minPriority).data.all():
-			self.minPriority = new_td_error
-
-		elif (new_td_error > self.maxPriority).data.all():
-			self.maxPriority = new_td_error
 
 	def get_max_weight(self, beta):
-		return ((1/(len(self.memory))) * 1/(self.minPriority/self.prioritySum)) ** beta
+		temp = self.priorityWeights[self.priorityWeights != 0] / torch.sum(self.priorityWeights)
+		return ((1/(len(self.memory))) * 1/(torch.min(temp))) ** beta
 
 	def __len__(self):
 		return len(self.memory)

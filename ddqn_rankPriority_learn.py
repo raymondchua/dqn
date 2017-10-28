@@ -21,7 +21,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.autograd import Variable
 import torchvision.transforms as T
-from PIL import Image
+
 
 from rank_based_prioritized_replay import RankBasedPrioritizedReplay, Experience
 from dqn_model import DQN
@@ -52,7 +52,6 @@ def ddqn_compute_y(batch_size=32, batch=None, model=None, target=None, gamma=0.9
 	Arthur Guez and David Silver. 
 	Refer to equation 4 for the Double Q-learning error function.
 	"""
-
 	non_final_mask = ByteTensor(tuple(map(lambda s: s is not None, batch.next_state))) #to get a boolean value of 1 if not final 
 	non_final_next_states = Variable(torch.cat([s for s in batch.next_state if s is not None]), volatile=True)
 
@@ -70,14 +69,14 @@ def ddqn_compute_y(batch_size=32, batch=None, model=None, target=None, gamma=0.9
 	next_state_action_values[non_final_mask] = target(non_final_next_states).gather(1, model_action_batch)
 	next_state_action_values.volatile = False
 
-	y_output = reward_batch + (gamma * next_state_action_values)
-	y_output = y_output.view(batch_size,1)
+	y_output =  (gamma * next_state_action_values) + reward_batch.squeeze() 
 	
-	# Compute Huber loss
-	loss = F.smooth_l1_loss(state_action_values, y_output)
+	state_action_values = state_action_values.squeeze()
+	y_output = y_output.squeeze()
+
+	loss =  (y_output - state_action_values).squeeze()
 
 	return loss
-
 
 def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_start, rp_size, 
 	exp_frame, exp_initial, exp_final, inital_beta, gamma, target_update_steps, frames_per_epoch, 
@@ -158,63 +157,70 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 
 		current_state_ex = np.expand_dims(current_state, 0)
 		curr_obs_ex = np.expand_dims(curr_obs, 0)
-		action = action.unsqueeze(0)
-		batch = Experience(current_state_ex, action, reward, curr_obs_ex, 0)
+		action_ex = action.unsqueeze(0)
+		batch = Experience(current_state_ex, action_ex, reward, curr_obs_ex, 0)
 
 		#compute td-error for one sample
 		td_error = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma)
-		td_error += 1e-4
+		td_error = torch.abs(td_error)
 		exp_replay.push(current_state, action, reward, curr_obs, td_error)
 		current_state = curr_obs
 
-		params_grad = []
-		for j in range(batch_size):
+		
 
-			#Get a random sample
-			obs_sample, obs_rank = exp_replay.sample()
+		weight_change = torch.zeros(batch_size)
+
+		# compute y 
+		if len(exp_replay) >= batch_size:
+			# Get batch samples
+			obs_samples, obs_ranks, obs_priorityVals = exp_replay.sample(batch_size)
+			obs_priorityTensor = torch.from_numpy(np.array(obs_priorityVals))
+			p_batch = 1/ obs_priorityTensor
+			w_batch = (1/len(exp_replay) * p_batch)**inital_beta
 			max_weight = exp_replay.get_max_weight(inital_beta)
-			p_j = 1/obs_rank
-			curr_weight = ((1/len(exp_replay))*(1/p_j))**inital_beta
-			curr_weight = curr_weight/max_weight
-			curr_weight = curr_weight.data.type(Tensor)
+			# curr_sample = obs_samples[0]
+			# batch = Experience(*zip(*obs_samples))
 
-			current_state_ex = np.expand_dims(obs_sample.state, 0)
-			curr_obs_ex = np.expand_dims(obs_sample.next_state, 0)
-			action = obs_sample.action
-			batch = Experience(current_state_ex, action, reward, curr_obs_ex, 0)
+			params_grad = []
 
-			#compute td-error for one sample
-			# loss = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma)
-			# exp_replay.update(obs_sample.state, obs_sample.action, obs_sample.reward, obs_sample.next_state, loss)
+			for i in range(len(obs_samples)):
+				sample = obs_samples[i]
+				current_state_ex = np.expand_dims(sample.state, 0)
+				curr_obs_ex = np.expand_dims(sample.next_state, 0)
+				action_ex = sample.action.unsqueeze(0)
+				batch = Experience(current_state_ex, action_ex, reward, curr_obs_ex, 0)
+				loss = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma)
+				loss_abs = torch.abs(loss)
+				exp_replay.update(obs_ranks[i], loss_abs)
 
-			# optimizer.zero_grad()
-			# loss.backward()
+				optimizer.zero_grad()
+				loss.backward()
 
-			# if j == 0:
-			# 	paramIndex = 0
-			# 	for param in model.parameters():
-			# 		tmp = curr_weight * loss.data * param.grad.data
-			# 		params_grad.append(tmp)
-			# 		paramIndex += 1
-					
+				#accumulate weight change
+				if i == 0:
+					for param in model.parameters():
+						tmp = ((w_batch[i]/max_weight) * loss.data[0]) * param.grad.data
+						params_grad.append(tmp)
 
-			# else:
-			# 	paramIndex = 0
-			# 	for param in model.parameters():
-			# 		tmp = curr_weight * loss.data * param.grad.data
-			# 		params_grad[paramIndex] = tmp + params_grad[paramIndex]
-			# 		paramIndex += 1
+
+				else:
+					paramIndex = 0
+					for param in model.parameters():
+						tmp = ((w_batch[i]/max_weight) * loss.data[0]) * param.grad.data
+						params_grad[paramIndex] = tmp + params_grad[paramIndex]
+						paramIndex += 1
+
 				
 					
 	
-		# #update weights
-		# paramIndex = 0
-		# for param in model.parameters():
-		# 	gradient_update = params_grad[paramIndex].mul(optimizer_constructor.kwargs['lr']).type(Tensor)
-		# 	layer_params = param.data
-		# 	layer_params_learned = layer_params + gradient_update
-		# 	paramIndex += 1
-		# 	param.data = layer_params_learned
+			#update weights
+			paramIndex = 0
+			for param in model.parameters():
+				gradient_update = params_grad[paramIndex].mul(optimizer_constructor.kwargs['lr']).type(Tensor)
+				layer_params = param.data
+				layer_params_learned = layer_params + gradient_update
+				paramIndex += 1
+				param.data = layer_params_learned
 
 
 		
@@ -222,7 +228,6 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 		frames_per_episode+= frames_per_state
 
 		if done:
-			print('Game ends!', rewards_per_episode)
 			rewards_duration.append(rewards_per_episode)
 			rewards_per_episode = 0
 			frames_per_episode=1

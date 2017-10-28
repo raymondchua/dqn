@@ -113,7 +113,7 @@ def dqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 	epsiodes_durations = []
 	rewards_per_episode = 0
 	rewards_duration = []
-	loss_per_epoch = []
+
 
 	env.reset()
 
@@ -147,6 +147,7 @@ def dqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 
 		#sample random mini-batch
 		obs_sample = exp_replay.sample(batch_size)
+		
 
 		batch = Experience(*zip(*obs_sample)) #unpack the batch into states, actions, rewards and next_states
 
@@ -161,7 +162,7 @@ def dqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 				param.grad.data.clamp_(-1,1)
 
 			optimizer.step()
-			loss_per_epoch.append(loss.data.cpu().numpy())
+			
 
 		frames_count+= 1
 		frames_per_episode+= frames_per_state
@@ -180,7 +181,7 @@ def dqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 				print(avg_reward_content)
 				logging.info(avg_reward_content)
 				rewards_duration = []
-				loss_per_epoch = []
+			
 
 		# update weights of target network for every TARGET_UPDATE_FREQ steps
 		if frames_count % target_update_steps == 0:

@@ -215,13 +215,13 @@ def initialize_rank_replay(env, rp_start, rp_size, frames_per_state,
 
 		current_state_ex = np.expand_dims(current_state, 0)
 		curr_obs_ex = np.expand_dims(curr_obs, 0)
-		action = action.unsqueeze(0)
+		action_ex = action.unsqueeze(0)
 
-		batch = Experience(current_state_ex, action, reward, curr_obs_ex, 0)
+		batch = Experience(current_state_ex, action_ex, reward, curr_obs_ex, 0)
 
 		#compute td-error for one sample
 		td_error = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma)
-		td_error += 1e-4
+		td_error = torch.abs(td_error)
 		exp_replay.push(current_state, action, reward, curr_obs, td_error)
 
 		current_state = curr_obs
@@ -232,7 +232,7 @@ def initialize_rank_replay(env, rp_start, rp_size, frames_per_state,
 			current_state, _, _, _ = play_game(env, frames_per_state)
 
 	# print(len(exp_replay))
-	exp_replay.sort()
+	# exp_replay.sort()
 
 	print('Rank Prioritized Replay initialized for training...')
 	return exp_replay
