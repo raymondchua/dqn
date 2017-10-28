@@ -193,34 +193,34 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 				loss_abs = torch.abs(loss)
 				exp_replay.update(obs_ranks[i], loss_abs)
 
-				optimizer.zero_grad()
-				loss.backward()
+				# optimizer.zero_grad()
+				# loss.backward()
 
 				#accumulate weight change
-				if i == 0:
-					for param in model.parameters():
-						tmp = ((w_batch[i]/max_weight) * loss.data[0]) * param.grad.data
-						params_grad.append(tmp)
+				# if i == 0:
+				# 	for param in model.parameters():
+				# 		tmp = ((w_batch[i]/max_weight) * loss.data[0]) * param.grad.data
+				# 		params_grad.append(tmp)
 
 
-				else:
-					paramIndex = 0
-					for param in model.parameters():
-						tmp = ((w_batch[i]/max_weight) * loss.data[0]) * param.grad.data
-						params_grad[paramIndex] = tmp + params_grad[paramIndex]
-						paramIndex += 1
+				# else:
+				# 	paramIndex = 0
+				# 	for param in model.parameters():
+				# 		tmp = ((w_batch[i]/max_weight) * loss.data[0]) * param.grad.data
+				# 		params_grad[paramIndex] = tmp + params_grad[paramIndex]
+				# 		paramIndex += 1
 
 				
 					
 	
 			#update weights
-			paramIndex = 0
-			for param in model.parameters():
-				gradient_update = params_grad[paramIndex].mul(optimizer_constructor.kwargs['lr']).type(Tensor)
-				layer_params = param.data
-				layer_params_learned = layer_params + gradient_update
-				paramIndex += 1
-				param.data = layer_params_learned
+			# paramIndex = 0
+			# for param in model.parameters():
+			# 	gradient_update = params_grad[paramIndex].mul(optimizer_constructor.kwargs['lr']).type(Tensor)
+			# 	layer_params = param.data
+			# 	layer_params_learned = layer_params + gradient_update
+			# 	paramIndex += 1
+			# 	param.data = layer_params_learned
 
 
 		
@@ -228,6 +228,7 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 		frames_per_episode+= frames_per_state
 
 		if done:
+			print('End Game!!', rewards_per_episode)
 			rewards_duration.append(rewards_per_episode)
 			rewards_per_episode = 0
 			frames_per_episode=1
