@@ -9,7 +9,7 @@ from torch.autograd import Variable
 
 from replay_memory import ExpReplay
 from rank_based_prioritized_replay import RankBasedPrioritizedReplay, Experience
-from ddqn_rankPriority_learn import ddqn_compute_y
+from ddqn_rankPriority_learn import ddqn_compute_y, ddqn_compute_td_error
 
 use_cuda = torch.cuda.is_available()
 FloatTensor = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
@@ -206,25 +206,26 @@ def initialize_rank_replay(env, rp_start, rp_size, frames_per_state,
 	num_actions = env.action_space.n
 
 	current_state, _, _, _ = play_game(env, frames_per_state)
+	
 
 	while episodes_count < rp_start:
 
 		action = LongTensor([[random.randrange(num_actions)]])
 		curr_obs, reward, done, _ = play_game(env, frames_per_state, action[0][0])
 		reward = Tensor([[reward]])
-
-		current_state_ex = np.expand_dims(current_state, 0)
-		curr_obs_ex = np.expand_dims(curr_obs, 0)
-		action_ex = action.unsqueeze(0)
-
-		batch = Experience(current_state_ex, action_ex, reward, curr_obs_ex, 0)
+		
+		current_state_ex = Variable(current_state, volatile=True)
+		curr_obs_ex = Variable(curr_obs, volatile=True)
+		action_ex = Variable(action, volatile=True)
+		reward_ex = Variable(reward, volatile=True)
 
 		#compute td-error for one sample
-		td_error = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma)
+		td_error = ddqn_compute_td_error(batch_size=1, state_batch=current_state_ex, reward_batch=reward_ex, action_batch=action_ex, 
+			next_state_batch=curr_obs_ex, model=model, target=target, gamma=gamma)
 		td_error = torch.abs(td_error)
-		exp_replay.push(current_state, action, reward, curr_obs, td_error)
+		exp_replay.push(current_state_ex, action_ex, reward, curr_obs_ex, td_error)
 
-		current_state = curr_obs
+		current_state_ex = curr_obs_ex
 		episodes_count+= 1
 
 		if done:
@@ -232,7 +233,7 @@ def initialize_rank_replay(env, rp_start, rp_size, frames_per_state,
 			current_state, _, _, _ = play_game(env, frames_per_state)
 
 	# print(len(exp_replay))
-	# exp_replay.sort()
+	exp_replay.sort()
 
 	print('Rank Prioritized Replay initialized for training...')
 	return exp_replay

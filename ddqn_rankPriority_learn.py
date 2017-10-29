@@ -45,6 +45,34 @@ Tensor = FloatTensor
 NUM_GAMES = 30
 MAX_FRAMES_PER_GAME = 520000
 
+def ddqn_compute_td_error(batch_size=32, state_batch=None, reward_batch=None, action_batch=None, next_state_batch=None,
+	model=None, target=None, gamma=0.99):
+	"""
+	Compute the Double Q learning error as based on the paper, 
+	"Deep Reinforcement Learning with Double Q-learning" by Hado van Hasselt and
+	Arthur Guez and David Silver. 
+	Refer to equation 4 for the Double Q-learning error function.
+	"""
+	#compute Q(s,a) based on the action taken
+	state_action_values = model(state_batch).gather(1,action_batch)
+
+	model_actions = model(next_state_batch).data.max(1)[1].view(batch_size,1)
+	model_action_batch = Variable(torch.cat([model_actions]), volatile=True)
+
+	next_state_action_values = Variable(torch.zeros(batch_size)).type(Tensor)
+	next_state_action_values = target(next_state_batch).gather(1, model_action_batch)
+	next_state_action_values.volatile = True
+
+	y_output =  (gamma * next_state_action_values).add_(reward_batch) 
+	
+	state_action_values = state_action_values.squeeze()
+	y_output = y_output.squeeze()
+
+	loss =  (y_output - state_action_values).squeeze()
+
+	return loss
+	
+
 def ddqn_compute_y(batch_size=32, batch=None, model=None, target=None, gamma=0.99):
 	"""
 	Compute the Double Q learning error as based on the paper, 
@@ -138,53 +166,53 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 
 	count = 0
 
-	while True:
+	# while True:
 
-		epsilon=scheduler.anneal_linear(frames_count)
-		choice = random.uniform(0,1)
+	# 	epsilon=scheduler.anneal_linear(frames_count)
+	# 	choice = random.uniform(0,1)
 
-		# epsilon greedy algorithm
-		if choice <= epsilon:
-			action = LongTensor([[random.randrange(num_actions)]])
+	# 	# epsilon greedy algorithm
+	# 	if choice <= epsilon:
+	# 		action = LongTensor([[random.randrange(num_actions)]])
 
-		else:
-			action = util.get_greedy_action(model, current_state)
+	# 	else:
+	# 		action = util.get_greedy_action(model, current_state)
 
-		curr_obs, reward, done, _ = util.play_game(env, frames_per_state, action[0][0])
+	# 	curr_obs, reward, done, _ = util.play_game(env, frames_per_state, action[0][0])
 
-		rewards_per_episode += reward
-		reward = Tensor([[reward]])
+	# 	rewards_per_episode += reward
+	# 	reward = Tensor([[reward]])
 
-		current_state_ex = np.expand_dims(current_state, 0)
-		curr_obs_ex = np.expand_dims(curr_obs, 0)
-		action_ex = action.unsqueeze(0)
-		batch = Experience(current_state_ex, action_ex, reward, curr_obs_ex, 0)
+	# 	current_state_ex = np.expand_dims(current_state, 0)
+	# 	curr_obs_ex = np.expand_dims(curr_obs, 0)
+	# 	action_ex = action.unsqueeze(0)
+	# 	batch = Experience(current_state_ex, action_ex, reward, curr_obs_ex, 0)
 
-		#compute td-error for one sample
-		td_error = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma)
-		td_error = torch.abs(td_error)
-		exp_replay.push(current_state, action, reward, curr_obs, td_error)
-		current_state = curr_obs
+	# 	#compute td-error for one sample
+	# 	td_error = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma)
+	# 	td_error = torch.abs(td_error)
+	# 	exp_replay.push(current_state, action, reward, curr_obs, td_error)
+	# 	current_state = curr_obs
 
-		t0 = time.time()
+	# 	t0 = time.time()
 
-		# compute y 
-		if len(exp_replay) >= batch_size:
-			# Get batch samples
-			obs_samples, obs_ranks, obs_priorityVals = exp_replay.sample(batch_size)
+	# 	# compute y 
+	# 	if len(exp_replay) >= batch_size:
+	# 		# Get batch samples
+	# 		obs_samples, obs_ranks, obs_priorityVals = exp_replay.sample(batch_size)
 		
-			obs_priorityTensor = torch.from_numpy(np.array(obs_priorityVals))
-			p_batch = 1/ obs_priorityTensor
-			w_batch = (1/len(exp_replay) * p_batch)**inital_beta
-			max_weight = exp_replay.get_max_weight(inital_beta)
-			params_grad = []
+	# 		obs_priorityTensor = torch.from_numpy(np.array(obs_priorityVals))
+	# 		p_batch = 1/ obs_priorityTensor
+	# 		w_batch = (1/len(exp_replay) * p_batch)**inital_beta
+	# 		max_weight = exp_replay.get_max_weight(inital_beta)
+	# 		params_grad = []
 
-			for i in range(len(obs_samples)):
-				sample = obs_samples[i]
-				current_state_ex = np.expand_dims(sample.state, 0)
-				curr_obs_ex = np.expand_dims(sample.next_state, 0)
-				action_ex = sample.action.unsqueeze(0)
-				batch = Experience(current_state_ex, action_ex, reward, curr_obs_ex, 0)
+	# 		for i in range(len(obs_samples)):
+	# 			sample = obs_samples[i]
+	# 			current_state_ex = np.expand_dims(sample.state, 0)
+	# 			curr_obs_ex = np.expand_dims(sample.next_state, 0)
+	# 			action_ex = sample.action.unsqueeze(0)
+	# 			batch = Experience(current_state_ex, action_ex, reward, curr_obs_ex, 0)
 				# loss = ddqn_compute_y(batch_size=1, batch=batch, model=model, target=target, gamma=gamma)
 				# loss_abs = torch.abs(loss)
 				# exp_replay.update(obs_ranks[i], loss_abs)
@@ -218,48 +246,48 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 			# 	param.data += params_grad[paramIndex].mul(optimizer_constructor.kwargs['lr']).type(Tensor)
 			# 	paramIndex += 1
 
-		tn = time.time()
-		print('timer: ', tn-t0)
+		# tn = time.time()
+		# print('timer: ', tn-t0)
 
 		
-		frames_count+= 1
-		frames_per_episode+= frames_per_state
+		# frames_count+= 1
+		# frames_per_episode+= frames_per_state
 
-		if done:
-			print('End Game!!', rewards_per_episode)
-			rewards_duration.append(rewards_per_episode)
-			rewards_per_episode = 0
-			frames_per_episode=1
-			episodes_count+=1
-			env.reset()
-			current_state, _, _, _ = util.play_game(env, frames_per_state)
+		# if done:
+		# 	print('End Game!!', rewards_per_episode)
+		# 	rewards_duration.append(rewards_per_episode)
+		# 	rewards_per_episode = 0
+		# 	frames_per_episode=1
+		# 	episodes_count+=1
+		# 	env.reset()
+		# 	current_state, _, _, _ = util.play_game(env, frames_per_state)
 
-			if episodes_count % 100 == 0:
-				avg_episode_reward = sum(rewards_duration)/100.0
-				avg_reward_content = 'Episode from', episodes_count-99, ' to ', episodes_count, ' has an average of ', avg_episode_reward, ' reward and loss of ', sum(loss_per_epoch)
-				print(avg_reward_content)
-				logging.info(avg_reward_content)
-				rewards_duration = []
-				loss_per_epoch = []
+		# 	if episodes_count % 100 == 0:
+		# 		avg_episode_reward = sum(rewards_duration)/100.0
+		# 		avg_reward_content = 'Episode from', episodes_count-99, ' to ', episodes_count, ' has an average of ', avg_episode_reward, ' reward and loss of ', sum(loss_per_epoch)
+		# 		print(avg_reward_content)
+		# 		logging.info(avg_reward_content)
+		# 		rewards_duration = []
+		# 		loss_per_epoch = []
 
-		# update weights of target network for every TARGET_UPDATE_FREQ steps
-		if frames_count % target_update_steps == 0:
-			target.load_state_dict(model.state_dict())
-			# print('weights updated at frame no. ', frames_count)
-
-
-		#Save weights every 250k frames
-		if frames_count % 250000 == 0:
-			util.make_sure_path_exists(output_directory+model_type+'/')
-			torch.save(model.state_dict(), 'rank_weights_'+ str(frames_count)+'.pth')
+		# # update weights of target network for every TARGET_UPDATE_FREQ steps
+		# if frames_count % target_update_steps == 0:
+		# 	target.load_state_dict(model.state_dict())
+		# 	# print('weights updated at frame no. ', frames_count)
 
 
-		#Print frame count and sort experience replay for every 1000000 (one million) frames:
-		if frames_count % 1000000 == 0:
-			training_update = 'frame count: ', frames_count, 'episode count: ', episodes_count, 'epsilon: ', epsilon
-			print(training_update)
-			logging.info(training_update)
-			exp_replay.sort()
+		# #Save weights every 250k frames
+		# if frames_count % 250000 == 0:
+		# 	util.make_sure_path_exists(output_directory+model_type+'/')
+		# 	torch.save(model.state_dict(), 'rank_weights_'+ str(frames_count)+'.pth')
+
+
+		# #Print frame count and sort experience replay for every 1000000 (one million) frames:
+		# if frames_count % 1000000 == 0:
+		# 	training_update = 'frame count: ', frames_count, 'episode count: ', episodes_count, 'epsilon: ', epsilon
+		# 	print(training_update)
+		# 	logging.info(training_update)
+		# 	exp_replay.sort()
 
 
 
