@@ -191,14 +191,14 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 		current_state = curr_obs
 
 		# compute y 
-		# if len(exp_replay) >= batch_size:
-		# 	# Get batch samples
-		# 	obs_samples, obs_ranks, obs_priorityVals = exp_replay.sample(batch_size)	
-		# 	obs_priorityTensor = torch.from_numpy(np.array(obs_priorityVals))
-		# 	p_batch = 1/ obs_priorityTensor
-		# 	w_batch = (1/len(exp_replay) * p_batch)**inital_beta
-		# 	max_weight = exp_replay.get_max_weight(inital_beta)
-		# 	params_grad = []
+		if len(exp_replay) >= batch_size:
+			# Get batch samples
+			obs_samples, obs_ranks, obs_priorityVals = exp_replay.sample(batch_size)	
+			obs_priorityTensor = torch.from_numpy(np.array(obs_priorityVals))
+			p_batch = 1/ obs_priorityTensor
+			w_batch = (1/len(exp_replay) * p_batch)**inital_beta
+			max_weight = exp_replay.get_max_weight(inital_beta)
+			params_grad = []
 
 		# 	for i in range(len(obs_samples)):
 		# 		sample = obs_samples[i]
