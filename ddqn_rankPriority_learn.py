@@ -211,11 +211,11 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 				loss_abs = torch.abs(loss)
 				exp_replay.update(obs_ranks[i], loss_abs)
 
-		# 		for param in model.parameters():
-		# 			if param.grad is not None:
-		# 				param.grad.data.zero_()
+				for param in model.parameters():
+					if param.grad is not None:
+						param.grad.data.zero_()
 
-		# 		loss.backward()
+				loss.backward()
 
 		# 		#accumulate weight change
 		# 		if i == 0:
