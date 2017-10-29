@@ -44,6 +44,8 @@ class RankBasedPrioritizedReplay(object):
 		self.memory = {}
 		self.position = 1
 		self.priorityWeights = {}
+		self.prioritySum = 0
+		self.minPriority = None
 
 
 	def push(self, state, action, reward, next_state, td_error):
@@ -54,16 +56,25 @@ class RankBasedPrioritizedReplay(object):
 		if(len(self.memory) < self.capacity):
 			self.memory[self.position] = Experience(state, action, reward, next_state, td_error)
 			self.priorityWeights[self.position] = td_error.data[0]
+			self.prioritySum += td_error.data[0]
 			self.position = (self.position + 1) % (self.capacity)
 			if self.position == 0:
 				self.position = 1
+
+			if self.minPriority is None:
+				self.minPriority = td_error.data[0]
+			elif self.minPriority > td_error.data[0]:
+				self.minPriority = td_error.data[0]
 			
 		else:
 			self.memory[self.position] = Experience(state, action, reward, next_state, td_error)
 			self.priorityWeights[self.position] = td_error.data[0]
+			self.prioritySum += td_error.data[0]
 			self.position = (self.position + 1) % (self.capacity)
 			if self.position == 0:
 				self.position = 1
+			if self.minPriority > td_error.data[0]:
+				self.minPriority = td_error.data[0]
 
 	def sort(self):
 		i = len(self.memory) // 2
@@ -98,7 +109,7 @@ class RankBasedPrioritizedReplay(object):
 
 
 	def normalize_weights(self):
-		total = sum(self.priorityWeights.values())
+		total = self.prioritySum
 		return [x/total for x in self.priorityWeights.values()]
 
 	def sample(self, batch_size):
@@ -127,13 +138,22 @@ class RankBasedPrioritizedReplay(object):
 		update the samples new td values
 		"""
 		curr_sample = self.memory[index]
+		self.prioritySum -= curr_sample.td_error.data[0]
 		self.memory[index] = Experience(curr_sample.state, curr_sample.action, curr_sample.reward, curr_sample.next_state, loss)
 		self.priorityWeights[index] = loss.data[0]
+		self.prioritySum += loss.data[0]
+
+		if self.minPriority > loss.data[0]:
+			self.minPriority = loss.data[0]
+
+		if self.minPriority == curr_sample.td_error.data[0]:
+				self.minPriority = min(self.priorityWeights.values())
 
 
 	def get_max_weight(self, beta):
-		temp = self.normalize_weights()
-		return ((1/(len(self.memory))) * 1/min(temp)) ** beta
+		total = self.prioritySum
+		minVal = self.minPriority/total
+		return ((1/(len(self.memory))) * 1/minVal) ** beta
 
 	def __len__(self):
 		return len(self.memory)
