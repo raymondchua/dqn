@@ -217,19 +217,19 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 
 				loss.backward()
 
-		# 		#accumulate weight change
-		# 		if i == 0:
-		# 			for param in model.parameters():
-		# 				tmp = ((w_batch[i]/max_weight) * loss.data[0]) * param.grad.data
-		# 				params_grad.append(tmp)
+				#accumulate weight change
+				if i == 0:
+					for param in model.parameters():
+						tmp = ((w_batch[i]/max_weight) * loss.data[0]) * param.grad.data
+						params_grad.append(tmp)
 
 
-		# 		else:
-		# 			paramIndex = 0
-		# 			for param in model.parameters():
-		# 				tmp = ((w_batch[i]/max_weight) * loss.data[0]) * param.grad.data
-		# 				params_grad[paramIndex] = tmp + params_grad[paramIndex]
-		# 				paramIndex += 1
+				else:
+					paramIndex = 0
+					for param in model.parameters():
+						tmp = ((w_batch[i]/max_weight) * loss.data[0]) * param.grad.data
+						params_grad[paramIndex] = tmp + params_grad[paramIndex]
+						paramIndex += 1
 	
 		# 	# update weights
 		# 	paramIndex = 0
