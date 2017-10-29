@@ -200,16 +200,16 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 			max_weight = exp_replay.get_max_weight(inital_beta)
 			params_grad = []
 
-		# 	for i in range(len(obs_samples)):
-		# 		sample = obs_samples[i]
-		# 		sample.state.volatile=False
-		# 		sample.next_state.volatile=False
-		# 		sample.reward.volatile=False
-		# 		sample.action.volatile=False
-		# 		loss = ddqn_compute_y(batch_size=1, state_batch=sample.state, reward_batch=sample.reward, action_batch=sample.action, 
-		# 			next_state_batch=sample.next_state, model=model, target=target, gamma=gamma)
-		# 		loss_abs = torch.abs(loss)
-		# 		exp_replay.update(obs_ranks[i], loss_abs)
+			for i in range(len(obs_samples)):
+				sample = obs_samples[i]
+				sample.state.volatile=False
+				sample.next_state.volatile=False
+				sample.reward.volatile=False
+				sample.action.volatile=False
+				loss = ddqn_compute_y(batch_size=1, state_batch=sample.state, reward_batch=sample.reward, action_batch=sample.action, 
+					next_state_batch=sample.next_state, model=model, target=target, gamma=gamma)
+				loss_abs = torch.abs(loss)
+				exp_replay.update(obs_ranks[i], loss_abs)
 
 		# 		for param in model.parameters():
 		# 			if param.grad is not None:
