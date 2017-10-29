@@ -43,7 +43,7 @@ class RankBasedPrioritizedReplay(object):
 		self.capacity = N
 		self.memory = {}
 		self.position = 1
-		self.priorityWeights = []
+		self.priorityWeights = {}
 
 
 	def push(self, state, action, reward, next_state, td_error):
@@ -53,12 +53,14 @@ class RankBasedPrioritizedReplay(object):
 		"""
 		if(len(self.memory) < self.capacity):
 			self.memory[self.position] = Experience(state, action, reward, next_state, td_error)
+			self.priorityWeights[self.position] = td_error.data[0]
 			self.position = (self.position + 1) % (self.capacity)
 			if self.position == 0:
 				self.position = 1
 			
 		else:
 			self.memory[self.position] = Experience(state, action, reward, next_state, td_error)
+			self.priorityWeights[self.position] = td_error.data[0]
 			self.position = (self.position + 1) % (self.capacity)
 			if self.position == 0:
 				self.position = 1
@@ -69,8 +71,6 @@ class RankBasedPrioritizedReplay(object):
 			self.percDown(i)
 			i -= 1
 
-		self.priorityWeights = self.normalize_weights(self.get_PriorityVals())
-
 	def percDown(self, i):
 		while(i * 2) <= len(self.memory):
 			temp_maxChild = self.maxChild(i)
@@ -78,7 +78,9 @@ class RankBasedPrioritizedReplay(object):
 			if (self.memory[i].td_error < self.memory[temp_maxChild].td_error).data.all():
 				tmp = self.memory[i]
 				self.memory[i] = self.memory[temp_maxChild]
+				self.priorityWeights[i] = self.memory[temp_maxChild].td_error.data[0]
 				self.memory[temp_maxChild] = tmp
+				self.priorityWeights[temp_maxChild] = tmp.td_error.data[0]
 
 			i = temp_maxChild
 
@@ -95,8 +97,9 @@ class RankBasedPrioritizedReplay(object):
 				return (i * 2) + 1
 
 
-	def normalize_weights(self, weights):
-		return torch.div(weights,torch.sum(weights))
+	def normalize_weights(self):
+		total = sum(self.priorityWeights.values())
+		return [x/total for x in self.priorityWeights.values()]
 
 	def sample(self, batch_size):
 		"""
@@ -108,16 +111,14 @@ class RankBasedPrioritizedReplay(object):
 		samples= list(range(1,batch_size+1))
 		segment_size = len(self.memory)//batch_size
 		index = list(range(1,len(self.memory)-segment_size,segment_size))
-
-		if len(self.priorityWeights) < len(self.memory):
-			self.priorityWeights = self.normalize_weights(self.get_PriorityVals())
+		total = sum(self.priorityWeights.values())
 
 		for i in index:
 			segment = {k: self.memory[k] for k in range(i,i+segment_size)}
 			choice = random.randint(i, i+segment_size)
 			samples_list.append(self.memory[choice])
 			rank_list.append(choice)
-			priority_list.append(self.priorityWeights[choice-1])
+			priority_list.append((self.priorityWeights[choice]/total))
 
 		return samples_list, rank_list, priority_list
 
@@ -127,23 +128,18 @@ class RankBasedPrioritizedReplay(object):
 		"""
 		curr_sample = self.memory[index]
 		self.memory[index] = Experience(curr_sample.state, curr_sample.action, curr_sample.reward, curr_sample.next_state, loss)
+		self.priorityWeights[index] = loss.data[0]
 
 
 	def get_max_weight(self, beta):
-		temp = self.priorityWeights[self.priorityWeights != 0] / torch.sum(self.priorityWeights)
-		return ((1/(len(self.memory))) * 1/(torch.min(temp))) ** beta
-
-	def get_PriorityVals(self):
-		self.priorityWeights = []
-		for i in range(len(self.memory)):
-			self.priorityWeights.append(self.memory[i+1].td_error.data[0])
-		return torch.from_numpy(np.array(self.priorityWeights))
+		temp = self.normalize_weights()
+		return ((1/(len(self.memory))) * 1/min(temp)) ** beta
 
 	def __len__(self):
 		return len(self.memory)
 
 	def get_minPriority(self):
-		return torch.min(self.get_PriorityVals())
+		return min(self.priorityWeights)
 
 	def pop(self):
 		return self.memory[1]
@@ -152,6 +148,6 @@ class RankBasedPrioritizedReplay(object):
 		return self.memory[index]
 
 	def get_maxPriority(self):
-		return torch.max(self.get_PriorityVals())
+		return max(self.priorityWeights)
 
 
