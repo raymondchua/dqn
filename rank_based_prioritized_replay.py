@@ -8,8 +8,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from collections import namedtuple
 from itertools import count
-from copy import deepcopy
-from PIL import Image
+import time
 
 import torch
 import torch.nn as nn
@@ -113,7 +112,11 @@ class RankBasedPrioritizedReplay(object):
 		rank_list = []
 		priority_list = []
 		self.normalize_weights()
-		samples = torch.utils.data.sampler.WeightedRandomSampler(self.priorityWeights.tolist(), batch_size, replacement=False)
+		t0 = time.time()
+		# samples = torch.utils.data.sampler.WeightedRandomSampler(self.priorityWeights.tolist(), batch_size, replacement=False)
+		samples= list(range(1,batch_size+1))
+		t1 = time.time()
+		# print("timer: ", t1-t0)
 		for sample in samples:
 			samples_list.append(self.memory[sample])
 			rank_list.append(sample)
