@@ -190,6 +190,8 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 		exp_replay.push(current_state_ex, action_ex, reward_ex, curr_obs_ex, td_error)
 		current_state = curr_obs
 
+		t0 = time.time()
+
 		# compute y 
 		if len(exp_replay) >= batch_size:
 			# Get batch samples
@@ -240,7 +242,11 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 		frames_count+= 1
 		frames_per_episode+= frames_per_state
 
+		t1 = time.time()
+
 		if done:
+			print('Game ends ', rewards_per_episode)
+			print(t1-t0)
 			rewards_duration.append(rewards_per_episode)
 			rewards_per_episode = 0
 			frames_per_episode=1
