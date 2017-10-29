@@ -119,13 +119,11 @@ class RankBasedPrioritizedReplay(object):
 		samples_list = []
 		rank_list = []
 		priority_list = []
-		samples= list(range(1,batch_size+1))
 		segment_size = len(self.memory)//batch_size
 		index = list(range(1,len(self.memory)-segment_size,segment_size))
 		total = sum(self.priorityWeights.values())
 
 		for i in index:
-			segment = {k: self.memory[k] for k in range(i,i+segment_size)}
 			choice = random.randint(i, i+segment_size)
 			samples_list.append(self.memory[choice])
 			rank_list.append(choice)

@@ -26,6 +26,7 @@ from ddqn_learn import ddqn_train
 from ddqn_eval import ddqn_eval
 
 from ddqn_rankPriority_learn import ddqn_rank_train
+from ddqn_rankPriorityBatch_learn import ddqn_rankBatch_train
 
 from scheduler import Scheduler
 
@@ -50,9 +51,10 @@ parser.add_argument('--rmsprop_alpha',			type=float, help='Smoothing constant fo
 parser.add_argument('--rmsprop_eps',			type=float, help='Term added to the denominator to improve numerical stability for RMSprop.  See pytorch doc for more info.', default=0.01)
 parser.add_argument('--explore_frame',			type=int, 	help='Num of frames over which the initial value of epsilon is linearly annealed to the final value', default=50000)
 parser.add_argument('--learning_rate', 			type=float, help='Learning rate', default=0.00025)
-parser.add_argument('--rank_priority',			type=bool,	help='Use rank prioritized replay memory if true', default=False)
 parser.add_argument('--output_directory',		type=str,	help='Output directory to save weights, if empty, outputs to a local folder named \'saved_weights\'', default='./saved_weights/')
 parser.add_argument('--last_checkpoint',		type=str,	help='Last saved weights that you wish to use to either resume training or for eval.', default='')
+parser.add_argument('--rank_priority',						help='Use rank prioritized replay memory if true', action="store_true", default=False)
+parser.add_argument('--rank_priority_batch',				help='Use rank prioritized replay memory if true', action="store_true", default=False)
 
 args = parser.parse_args()
 
@@ -157,6 +159,23 @@ def main():
 
 		if args.rank_priority: 
 			ddqn_rank_train(env, scheduler, optimizer_constructor=optimizer, 
+			model_type = args.model_type, 
+			batch_size = args.batch_size, 
+			rp_start = args.rp_initial, 
+			rp_size = args.rp_capacity, 
+			exp_frame = args.explore_frame, 
+			exp_initial = args.initial_explore, 
+			exp_final = args.final_explore,
+			inital_beta = args.inital_beta,
+			gamma = args.discount_factor,
+			target_update_steps = args.target_update_steps,
+			frames_per_epoch = args.frames_per_epoch,
+			frames_per_state = args.frames_per_state,
+			output_directory = args.output_directory,
+			last_checkpoint = args.last_checkpoint)
+
+		elif args.rank_priority_batch:
+			ddqn_rankBatch_train(env, scheduler, optimizer_constructor=optimizer, 
 			model_type = args.model_type, 
 			batch_size = args.batch_size, 
 			rp_start = args.rp_initial, 

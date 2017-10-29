@@ -93,15 +93,14 @@ def ddqn_compute_y(batch_size=32, state_batch=None, reward_batch=None, action_ba
 
 	
 	y_output =  (gamma * next_state_action_values).add_(reward_batch) 
+	y_output = y_output.view(batch_size,1)
 	
-	state_action_values = state_action_values.squeeze()
-	y_output = y_output.squeeze()
-
-	loss =  (y_output - state_action_values).squeeze()
+	# Compute Huber loss
+	loss = F.smooth_l1_loss(state_action_values, y_output)
 
 	return loss
 
-def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_start, rp_size, 
+def ddqn_rankBatch_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_start, rp_size, 
 	exp_frame, exp_initial, exp_final, inital_beta, gamma, target_update_steps, frames_per_epoch, 
 	frames_per_state, output_directory, last_checkpoint):
 
@@ -191,51 +190,51 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 		current_state = curr_obs
 
 		# compute y 
-		# if len(exp_replay) >= batch_size:
-		# 	# Get batch samples
-		# 	obs_samples, obs_ranks, obs_priorityVals = exp_replay.sample(batch_size)	
-		# 	obs_priorityTensor = torch.from_numpy(np.array(obs_priorityVals))
-		# 	p_batch = 1/ obs_priorityTensor
-		# 	w_batch = (1/len(exp_replay) * p_batch)**inital_beta
-		# 	max_weight = exp_replay.get_max_weight(inital_beta)
-		# 	params_grad = []
+		if len(exp_replay) >= batch_size:
+			# Get batch samples
+			obs_samples, obs_ranks, obs_priorityVals = exp_replay.sample(batch_size)	
+			obs_priorityTensor = torch.from_numpy(np.array(obs_priorityVals))
+			p_batch = 1/ obs_priorityTensor
+			w_batch = (1/len(exp_replay) * p_batch)**inital_beta
+			max_weight = exp_replay.get_max_weight(inital_beta)
+			params_grad = []
 
-		# 	for i in range(len(obs_samples)):
-		# 		sample = obs_samples[i]
-		# 		sample.state.volatile=False
-		# 		sample.next_state.volatile=False
-		# 		sample.reward.volatile=False
-		# 		sample.action.volatile=False
-		# 		loss = ddqn_compute_y(batch_size=1, state_batch=sample.state, reward_batch=sample.reward, action_batch=sample.action, 
-		# 			next_state_batch=sample.next_state, model=model, target=target, gamma=gamma)
-		# 		loss_abs = torch.abs(loss)
-		# 		exp_replay.update(obs_ranks[i], loss_abs)
+			for i in range(len(obs_samples)):
+				sample = obs_samples[i]
+				sample.state.volatile=False
+				sample.next_state.volatile=False
+				sample.reward.volatile=False
+				sample.action.volatile=False
+				loss = ddqn_compute_y(batch_size=1, state_batch=sample.state, reward_batch=sample.reward, action_batch=sample.action, 
+					next_state_batch=sample.next_state, model=model, target=target, gamma=gamma)
+				loss_abs = torch.abs(loss)
+				exp_replay.update(obs_ranks[i], loss_abs)
 
-		# 		for param in model.parameters():
-		# 			if param.grad is not None:
-		# 				param.grad.data.zero_()
+				for param in model.parameters():
+					if param.grad is not None:
+						param.grad.data.zero_()
 
-		# 		loss.backward()
+				loss.backward()
 
-		# 		#accumulate weight change
-		# 		if i == 0:
-		# 			for param in model.parameters():
-		# 				tmp = ((w_batch[i]/max_weight) * loss.data[0]) * param.grad.data
-		# 				params_grad.append(tmp)
+				#accumulate weight change
+				if i == 0:
+					for param in model.parameters():
+						tmp = ((w_batch[i]/max_weight) * loss.data[0]) * param.grad.data
+						params_grad.append(tmp)
 
 
-		# 		else:
-		# 			paramIndex = 0
-		# 			for param in model.parameters():
-		# 				tmp = ((w_batch[i]/max_weight) * loss.data[0]) * param.grad.data
-		# 				params_grad[paramIndex] = tmp + params_grad[paramIndex]
-		# 				paramIndex += 1
+				else:
+					paramIndex = 0
+					for param in model.parameters():
+						tmp = ((w_batch[i]/max_weight) * loss.data[0]) * param.grad.data
+						params_grad[paramIndex] = tmp + params_grad[paramIndex]
+						paramIndex += 1
 	
-		# 	# update weights
-		# 	paramIndex = 0
-		# 	for param in model.parameters():
-		# 		param.data += params_grad[paramIndex].mul(optimizer_constructor.kwargs['lr']).type(Tensor)
-		# 		paramIndex += 1
+			# update weights
+			paramIndex = 0
+			for param in model.parameters():
+				param.data += params_grad[paramIndex].mul(optimizer_constructor.kwargs['lr']).type(Tensor)
+				paramIndex += 1
 		
 		frames_count+= 1
 		frames_per_episode+= frames_per_state
