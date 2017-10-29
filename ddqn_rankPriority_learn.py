@@ -231,11 +231,11 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 						params_grad[paramIndex] = tmp + params_grad[paramIndex]
 						paramIndex += 1
 	
-		# 	# update weights
-		# 	paramIndex = 0
-		# 	for param in model.parameters():
-		# 		param.data += params_grad[paramIndex].mul(optimizer_constructor.kwargs['lr']).type(Tensor)
-		# 		paramIndex += 1
+			# update weights
+			paramIndex = 0
+			for param in model.parameters():
+				param.data += params_grad[paramIndex].mul(optimizer_constructor.kwargs['lr']).type(Tensor)
+				paramIndex += 1
 		
 		frames_count+= 1
 		frames_per_episode+= frames_per_state
