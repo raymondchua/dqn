@@ -213,14 +213,14 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 				
 					
 	
-			#update weights
-			# paramIndex = 0
-			# for param in model.parameters():
-			# 	gradient_update = params_grad[paramIndex].mul(optimizer_constructor.kwargs['lr']).type(Tensor)
-			# 	layer_params = param.data
-			# 	layer_params_learned = layer_params + gradient_update
-			# 	paramIndex += 1
-			# 	param.data = layer_params_learned
+			update weights
+			paramIndex = 0
+			for param in model.parameters():
+				gradient_update = params_grad[paramIndex].mul(optimizer_constructor.kwargs['lr']).type(Tensor)
+				layer_params = param.data
+				layer_params_learned = layer_params + gradient_update
+				paramIndex += 1
+				param.data = layer_params_learned
 
 
 		
