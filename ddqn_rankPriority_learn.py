@@ -189,8 +189,6 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 		td_error = torch.abs(td_error)
 		exp_replay.push(current_state_ex, action_ex, reward_ex, curr_obs_ex, td_error)
 		current_state = curr_obs
-	
-		t0 = time.time()
 
 		# compute y 
 		if len(exp_replay) >= batch_size:
@@ -243,9 +241,6 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 		frames_per_episode+= frames_per_state
 
 		if done:
-			tn = time.time()
-			print('timer: ', tn-t0)
-			print('End Game!!', rewards_per_episode)
 			rewards_duration.append(rewards_per_episode)
 			rewards_per_episode = 0
 			frames_per_episode=1
