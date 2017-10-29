@@ -241,6 +241,7 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 		frames_per_episode+= frames_per_state
 
 		if done:
+			print('Game ends', rewards_per_episode)
 			rewards_duration.append(rewards_per_episode)
 			rewards_per_episode = 0
 			frames_per_episode=1
