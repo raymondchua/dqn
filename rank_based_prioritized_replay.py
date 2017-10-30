@@ -119,12 +119,15 @@ class RankBasedPrioritizedReplay(object):
 		samples_list = []
 		rank_list = []
 		priority_list = []
-		segment_size = len(self.memory)//batch_size
-		index = list(range(1,len(self.memory)-segment_size,segment_size))
+		segment_size = (len(self.memory)+1)//batch_size
+		index = list(range(1,len(self.memory),segment_size))
 		total = sum(self.priorityWeights.values())
 
 		for i in index:
-			choice = random.randint(i, i+segment_size)
+			if i + segment_size < len(self.memory):
+				choice = random.randint(i, i+segment_size)
+			else:
+				choice = random.randint(i, len(self.memory)-1)
 			samples_list.append(self.memory[choice])
 			rank_list.append(choice)
 			priority_list.append((self.priorityWeights[choice]/total))
@@ -135,17 +138,19 @@ class RankBasedPrioritizedReplay(object):
 		"""
 		update the samples new td values
 		"""
-		curr_sample = self.memory[index]
-		self.prioritySum -= curr_sample.td_error.data[0]
-		self.memory[index] = Experience(curr_sample.state, curr_sample.action, curr_sample.reward, curr_sample.next_state, loss)
-		self.priorityWeights[index] = loss.data[0]
-		self.prioritySum += loss.data[0]
+		for i in range(len(index)):
+			indexVal = index[i]
+			curr_sample = self.memory[indexVal]
+			self.prioritySum -= curr_sample.td_error.data[0]
+			self.memory[indexVal] = Experience(curr_sample.state, curr_sample.action, curr_sample.reward, curr_sample.next_state, loss[i])
+			self.priorityWeights[indexVal] = loss[i].data[0]
+			self.prioritySum += loss[i].data[0]
 
-		if self.minPriority > loss.data[0]:
-			self.minPriority = loss.data[0]
+			if self.minPriority > loss[i].data[0]:
+				self.minPriority = loss[i].data[0]
 
-		if self.minPriority == curr_sample.td_error.data[0]:
-				self.minPriority = min(self.priorityWeights.values())
+			if self.minPriority == curr_sample.td_error.data[0]:
+					self.minPriority = min(self.priorityWeights.values())
 
 
 	def get_max_weight(self, beta):

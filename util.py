@@ -223,7 +223,7 @@ def initialize_rank_replay(env, rp_start, rp_size, frames_per_state,
 		td_error = ddqn_compute_td_error(batch_size=1, state_batch=current_state_ex, reward_batch=reward_ex, action_batch=action_ex, 
 			next_state_batch=curr_obs_ex, model=model, target=target, gamma=gamma)
 		td_error = torch.abs(td_error)
-		exp_replay.push(current_state_ex, action_ex, reward_ex, curr_obs_ex, td_error)
+		exp_replay.push(current_state, action, reward, curr_obs, td_error)
 
 		current_state_ex = curr_obs_ex
 		episodes_count+= 1
