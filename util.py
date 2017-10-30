@@ -3,6 +3,7 @@ import cv2
 import gym
 import random
 import numpy as np
+import errno
 
 import torch
 from torch.autograd import Variable
@@ -271,8 +272,8 @@ def initialize_rank_replay(env, rp_start, rp_size, frames_per_state,
 # 	return exp_replay
 
 def make_sure_path_exists(path):
-    try:
-        os.makedirs(path)
-    except OSError as exception:
-        if exception.errno != errno.EEXIST:
-            raise
+	try:
+		os.makedirs(path)
+	except OSError as exception:
+		if exception.errno != errno.EEXIST:
+			raise
