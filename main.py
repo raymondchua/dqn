@@ -42,6 +42,7 @@ parser.add_argument('--rp_capacity',			type=int, 	help='Replay Memory capacity',
 parser.add_argument('--rp_initial',				type=int, 	help='Initial size to populate Replay Memory', default=50000)
 parser.add_argument('--target_update_steps',	type=int, 	help='The frequency with which the target network is updated', default=10000)
 parser.add_argument('--frames_per_epoch',		type=int, 	help='Num frames per epoch. Useful as a counter for eval', default=250000)
+parser.add_argument('--max_frames',				type=int, 	help='Num frames for the whole training.', default=200000000)
 parser.add_argument('--frames_per_state',		type=int, 	help='The number of most recent frames used as an input to the Q network. Actions are repeated over these frames.', default=4)
 parser.add_argument('--inital_beta', 			type=float, help='Beta is the exponent value for the importance sampling weights', default=0.5)
 parser.add_argument('--discount_factor', 		type=float, help='Discount factor gamma used in the Q-learning udate', default=0.99)
@@ -54,7 +55,6 @@ parser.add_argument('--learning_rate', 			type=float, help='Learning rate', defa
 parser.add_argument('--output_directory',		type=str,	help='Output directory to save weights, if empty, outputs to a local folder named \'saved_weights\'', default='./saved_weights/')
 parser.add_argument('--last_checkpoint',		type=str,	help='Last saved weights that you wish to use to either resume training or for eval.', default='')
 parser.add_argument('--rank_priority',						help='Use rank prioritized replay memory if true', action="store_true", default=False)
-parser.add_argument('--rank_priority_batch',				help='Use rank prioritized replay memory if true', action="store_true", default=False)
 
 args = parser.parse_args()
 
@@ -172,24 +172,9 @@ def main():
 			frames_per_epoch = args.frames_per_epoch,
 			frames_per_state = args.frames_per_state,
 			output_directory = args.output_directory,
-			last_checkpoint = args.last_checkpoint)
+			last_checkpoint = args.last_checkpoint,
+			max_frames=args.max_frames)
 
-		elif args.rank_priority_batch:
-			ddqn_rankBatch_train(env, scheduler, optimizer_constructor=optimizer, 
-			model_type = args.model_type, 
-			batch_size = args.batch_size, 
-			rp_start = args.rp_initial, 
-			rp_size = args.rp_capacity, 
-			exp_frame = args.explore_frame, 
-			exp_initial = args.initial_explore, 
-			exp_final = args.final_explore,
-			inital_beta = args.inital_beta,
-			gamma = args.discount_factor,
-			target_update_steps = args.target_update_steps,
-			frames_per_epoch = args.frames_per_epoch,
-			frames_per_state = args.frames_per_state,
-			output_directory = args.output_directory,
-			last_checkpoint = args.last_checkpoint)
 
 		else:
 			ddqn_train(env, scheduler, optimizer_constructor=optimizer, 

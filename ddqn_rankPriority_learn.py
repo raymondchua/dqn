@@ -108,7 +108,7 @@ def ddqn_compute_y(batch, batch_size, model, target, gamma):
 
 def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_start, rp_size, 
 	exp_frame, exp_initial, exp_final, inital_beta, gamma, target_update_steps, frames_per_epoch, 
-	frames_per_state, output_directory, last_checkpoint):
+	frames_per_state, output_directory, last_checkpoint, max_frames):
 
 	"""
 	Implementation of the training algorithm for DDQN using Rank-based prioritization.
@@ -164,9 +164,7 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 	current_state, _, _, _ = util.play_game(env, frames_per_state)
 	print('Starting training...')
 
-	count = 0
-
-	while True:
+	for frames_count in range(1, max_frames):
 
 		epsilon=scheduler.anneal_linear(frames_count)
 		choice = random.uniform(0,1)
@@ -212,7 +210,6 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 			loss_abs = torch.abs(loss)
 			exp_replay.update(obs_ranks, loss_abs)
 
-
 			for param in model.parameters():
 				if param.grad is not None:
 					param.grad.data.zero_()
@@ -221,50 +218,11 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 
 			for param in model.parameters():
 				param.data += (param.grad.data.mul_(torch.dot(w_batch,loss.data))).mul(optimizer_constructor.kwargs['lr'])
-
-			
-		# 	for i in range(len(obs_samples)):
-		# 		sample = obs_samples[i]
-		# 		sample.state.volatile=False
-		# 		sample.next_state.volatile=False
-		# 		sample.reward.volatile=False
-		# 		sample.action.volatile=False
-		# 		loss = ddqn_compute_y(batch_size=1, state_batch=sample.state, reward_batch=sample.reward, action_batch=sample.action, 
-		# 			next_state_batch=sample.next_state, model=model, target=target, gamma=gamma)
-		# 		loss_abs = torch.abs(loss)
-		# 		exp_replay.update(obs_ranks[i], loss_abs)
-
-		# 		for param in model.parameters():
-		# 			if param.grad is not None:
-		# 				param.grad.data.zero_()
-
-		# 		loss.backward()
-
-		# 		#accumulate weight change
-		# 		if i == 0:
-		# 			for param in model.parameters():
-		# 				tmp = ((w_batch[i]/max_weight) * loss.data[0]) * param.grad.data
-		# 				params_grad.append(tmp)
-
-
-		# 		else:
-		# 			paramIndex = 0
-		# 			for param in model.parameters():
-		# 				tmp = ((w_batch[i]/max_weight) * loss.data[0]) * param.grad.data
-		# 				params_grad[paramIndex] = tmp + params_grad[paramIndex]
-		# 				paramIndex += 1
-	
-		# 	# update weights
-		# 	paramIndex = 0
-		# 	for param in model.parameters():
-		# 		param.data += params_grad[paramIndex].mul(optimizer_constructor.kwargs['lr']).type(Tensor)
-		# 		paramIndex += 1
 		
 		frames_count+= 1
 		frames_per_episode+= frames_per_state
 
 		if done:
-			print('Game ends', rewards_per_episode)
 			rewards_duration.append(rewards_per_episode)
 			rewards_per_episode = 0
 			frames_per_episode=1
