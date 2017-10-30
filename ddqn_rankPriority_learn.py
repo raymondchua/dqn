@@ -158,7 +158,6 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 	epsiodes_durations = []
 	rewards_per_episode = 0
 	rewards_duration = []
-	loss_per_epoch = []
 
 	
 	current_state, _, _, _ = util.play_game(env, frames_per_state)
@@ -219,7 +218,6 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 			for param in model.parameters():
 				param.data += (param.grad.data.mul_(torch.dot(w_batch,loss.data))).mul(optimizer_constructor.kwargs['lr'])
 		
-		frames_count+= 1
 		frames_per_episode+= frames_per_state
 
 		if done:
@@ -232,11 +230,10 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 
 			if episodes_count % 100 == 0:
 				avg_episode_reward = sum(rewards_duration)/100.0
-				avg_reward_content = 'Episode from', episodes_count-99, ' to ', episodes_count, ' has an average of ', avg_episode_reward, ' reward and loss of ', sum(loss_per_epoch)
+				avg_reward_content = 'Episode from', episodes_count-99, ' to ', episodes_count, ' has an average of ', avg_episode_reward, ' reward.'
 				print(avg_reward_content)
 				logging.info(avg_reward_content)
 				rewards_duration = []
-				loss_per_epoch = []
 
 		# update weights of target network for every TARGET_UPDATE_FREQ steps
 		if frames_count % target_update_steps == 0:
