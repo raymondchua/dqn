@@ -26,7 +26,8 @@ from ddqn_learn import ddqn_train
 from ddqn_eval import ddqn_eval
 
 from ddqn_rankPriority_learn import ddqn_rank_train
-from ddqn_rankPriorityBatch_learn import ddqn_rankBatch_train
+
+from duel_rankPriority_learn import duel_rank_train
 
 from scheduler import Scheduler
 
@@ -34,7 +35,7 @@ parser = argparse = argparse.ArgumentParser(description='Deep Q Network Pytorch 
 
 parser.add_argument('--mode', 					type=str, 	help='train or eval', default='train')
 parser.add_argument('--era', 					type=str, 	help='old or new', default='new')
-parser.add_argument('--model_type', 			type=str,	help='Model architecture, eg. DQN', default='dqn', choices=['dqn', 'ddqn'])
+parser.add_argument('--model_type', 			type=str,	help='Model architecture, eg. DQN', default='dqn', choices=['dqn', 'ddqn', 'duel'])
 parser.add_argument('--environment',			type=str,	help='Game environment, eg. SpaceInvaders-v0', default='SpaceInvaders-v0')
 parser.add_argument('--input_size', 			type=int,	help='Input size for N x N. Resizing and/or padding is applied whenever necessary', default=84)
 parser.add_argument('--batch_size',				type=int, 	help='Batch size', default=32)
@@ -154,7 +155,7 @@ def main():
 		output_directory = args.output_directory,
 		last_checkpoint = args.last_checkpoint)
 
-	elif args.model_type == 'ddqn' and args.mode == 'train' and args.era == 'new':
+	elif args.model_type == 'ddqn' and args.mode == 'train':
 
 		if args.last_checkpoint:
 			if not os.path.isfile(args.last_checkpoint):
@@ -195,11 +196,13 @@ def main():
 			output_directory = args.output_directory,
 			last_checkpoint = args.last_checkpoint)
 
-	elif args.model_type == 'ddqn' and args.mode == 'eval' and args.era == 'new':
+	elif args.model_type == 'ddqn' and args.mode == 'eval':
 
 		if args.last_checkpoint:
 			if not os.path.isfile(args.last_checkpoint):
 				raise FileNotFoundError('Checkpoint file cannot be found!')
+
+		#TODO: create ddqn rank eval
 
 		ddqn_eval(env, exploreScheduler, optimizer_constructor=optimizer, 
 		model_type = args.model_type, 
@@ -215,6 +218,30 @@ def main():
 		frames_per_state = args.frames_per_state,
 		output_directory = args.output_directory,
 		last_checkpoint = args.last_checkpoint)
+
+	elif args.model_type == 'duel' and args.mode == 'train':
+
+		if args.last_checkpoint:
+			if not os.path.isfile(args.last_checkpoint):
+				raise FileNotFoundError('Checkpoint file cannot be found!')
+
+		if args.rank_priority: 
+			duel_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor=optimizer, 
+			model_type = args.model_type, 
+			batch_size = args.batch_size, 
+			rp_start = args.rp_initial, 
+			rp_size = args.rp_capacity, 
+			exp_frame = args.explore_frame, 
+			exp_initial = args.initial_explore, 
+			exp_final = args.final_explore,
+			prob_alpha = args.prob_alpha,
+			gamma = args.discount_factor,
+			target_update_steps = args.target_update_steps,
+			frames_per_epoch = args.frames_per_epoch,
+			frames_per_state = args.frames_per_state,
+			output_directory = args.output_directory,
+			last_checkpoint = args.last_checkpoint,
+			max_frames=args.max_frames)
 
 	print("pass...")
 
