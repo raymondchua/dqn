@@ -25,7 +25,6 @@ import torchvision.transforms as T
 
 from rank_based_prioritized_replay import RankBasedPrioritizedReplay, Experience
 from dqn_model import DQN
-from scheduler import Scheduler
 import util
 
 
@@ -102,12 +101,12 @@ def ddqn_compute_y(batch, batch_size, model, target, gamma):
 
 	loss = state_action_values.squeeze() -  y_output
 
-	avgloss = F.smooth_l1_loss(state_action_values.squeeze(), y_output)
+	avgloss = torch.sum(loss).div(batch_size)
 
 	return avgloss, loss
 
-def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_start, rp_size, 
-	exp_frame, exp_initial, exp_final, inital_beta, gamma, target_update_steps, frames_per_epoch, 
+def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor, model_type, batch_size, rp_start, rp_size, 
+	exp_frame, exp_initial, exp_final, prob_alpha, gamma, target_update_steps, frames_per_epoch, 
 	frames_per_state, output_directory, last_checkpoint, max_frames):
 
 	"""
@@ -146,7 +145,7 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 
 	else:
 		exp_replay = util.initialize_rank_replay(env, rp_start, rp_size, frames_per_state, 
-			model, target, gamma)
+			model, target, gamma, prob_alpha)
 
 	target.load_state_dict(model.state_dict())
 
@@ -165,7 +164,8 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 
 	for frames_count in range(1, max_frames):
 
-		epsilon=scheduler.anneal_linear(frames_count)
+		epsilon=exploreScheduler.anneal_linear(frames_count)
+		beta = betaScheduler.anneal_linear(frames_count)
 		choice = random.uniform(0,1)
 
 		# epsilon greedy algorithm
@@ -188,7 +188,7 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 		td_error = ddqn_compute_td_error(batch_size=1, state_batch=current_state_ex, reward_batch=reward_ex, action_batch=action_ex, 
 			next_state_batch=curr_obs_ex, model=model, target=target, gamma=gamma)
 
-		td_error = torch.abs(td_error)
+		td_error = torch.pow(torch.abs(td_error)+1e-6, prob_alpha)
 		exp_replay.push(current_state, action, reward, curr_obs, td_error)
 		current_state = curr_obs
 
@@ -199,8 +199,8 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 			num_samples_per_batch = len(obs_samples)
 			obs_priorityTensor = torch.from_numpy(np.array(obs_priorityVals))
 			p_batch = 1/ obs_priorityTensor
-			w_batch = (1/len(exp_replay) * p_batch)**inital_beta
-			max_weight = exp_replay.get_max_weight(inital_beta)
+			w_batch = (1/len(exp_replay) * p_batch)**beta
+			max_weight = exp_replay.get_max_weight(beta)
 			w_batch /= max_weight
 			w_batch = w_batch.type(Tensor)
 
@@ -221,6 +221,7 @@ def ddqn_rank_train(env, scheduler, optimizer_constructor, model_type, batch_siz
 		frames_per_episode+= frames_per_state
 
 		if done:
+			print('Game ends', rewards_per_episode)
 			rewards_duration.append(rewards_per_episode)
 			rewards_per_episode = 0
 			frames_per_episode=1

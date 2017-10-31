@@ -155,7 +155,7 @@ class RankBasedPrioritizedReplay(object):
 
 	def get_max_weight(self, beta):
 		total = self.prioritySum
-		minVal = (self.minPriority/total) + 1e-6
+		minVal = (self.minPriority/total)
 		return ((1/(len(self.memory))) * 1/minVal) ** beta
 
 	def __len__(self):

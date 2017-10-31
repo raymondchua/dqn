@@ -44,7 +44,9 @@ parser.add_argument('--target_update_steps',	type=int, 	help='The frequency with
 parser.add_argument('--frames_per_epoch',		type=int, 	help='Num frames per epoch. Useful as a counter for eval', default=250000)
 parser.add_argument('--max_frames',				type=int, 	help='Num frames for the whole training.', default=200000000)
 parser.add_argument('--frames_per_state',		type=int, 	help='The number of most recent frames used as an input to the Q network. Actions are repeated over these frames.', default=4)
-parser.add_argument('--inital_beta', 			type=float, help='Beta is the exponent value for the importance sampling weights', default=0.5)
+parser.add_argument('--inital_beta', 			type=float, help='Initial Beta. The exponent value for the importance sampling weights', default=0.5)
+parser.add_argument('--final_beta', 			type=float, help='Final Beta value. See initial_beta for more info.', default=1.0)
+parser.add_argument('--prob_alpha', 			type=float, help='Alpha value for the transition probability.A value of zero leades to uniform distribution.', default=0.7)
 parser.add_argument('--discount_factor', 		type=float, help='Discount factor gamma used in the Q-learning udate', default=0.99)
 parser.add_argument('--initial_explore', 		type=float,	help='Initial value of epsilon in epsilon-greedy exploration', default=1.0)
 parser.add_argument('--final_explore', 			type=float,	help='Final value of epsilon in epsilon-greedy exploration', default=0.1)
@@ -63,7 +65,8 @@ Optimizer = namedtuple("Optimizer", ["type", "kwargs"])
 def main():
 
 	env = gym.make(args.environment).unwrapped
-	scheduler = Scheduler(args.explore_frame, args.initial_explore, args.final_explore)
+	exploreScheduler = Scheduler(args.explore_frame, args.initial_explore, args.final_explore)
+	betaScheduler = Scheduler(args.max_frames, args.inital_beta, args.final_beta)
 	optimizer = Optimizer(type=optim.RMSprop, kwargs=dict(lr=args.learning_rate, alpha=args.rmsprop_alpha, eps=args.rmsprop_eps))
 
 	if args.model_type == 'dqn' and args.mode == 'train' and args.era == 'old':
@@ -72,7 +75,7 @@ def main():
 			if not os.path.isfile(args.last_checkpoint):
 				raise FileNotFoundError('Checkpoint file cannot be found!')
 
-		dqn_train_old(env, scheduler, optimizer_constructor=optimizer, 
+		dqn_train_old(env, exploreScheduler, optimizer_constructor=optimizer, 
 		model_type = args.model_type, 
 		batch_size = args.batch_size, 
 		rp_start = args.rp_initial, 
@@ -93,7 +96,7 @@ def main():
 			if not os.path.isfile(args.last_checkpoint):
 				raise FileNotFoundError('Checkpoint file cannot be found!')
 
-		dqn_eval_old(env, scheduler, optimizer_constructor=optimizer, 
+		dqn_eval_old(env, exploreScheduler, optimizer_constructor=optimizer, 
 		model_type = args.model_type, 
 		batch_size = args.batch_size, 
 		rp_start = args.rp_initial, 
@@ -114,7 +117,7 @@ def main():
 			if not os.path.isfile(args.last_checkpoint):
 				raise FileNotFoundError('Checkpoint file cannot be found!')
 
-		dqn_train(env, scheduler, optimizer_constructor=optimizer, 
+		dqn_train(env, exploreScheduler, optimizer_constructor=optimizer, 
 		model_type = args.model_type, 
 		batch_size = args.batch_size, 
 		rp_start = args.rp_initial, 
@@ -136,7 +139,7 @@ def main():
 				raise FileNotFoundError('Checkpoint file cannot be found!')
 
 
-		dqn_eval(env, scheduler, optimizer_constructor=optimizer, 
+		dqn_eval(env, exploreScheduler, optimizer_constructor=optimizer, 
 		model_type = args.model_type, 
 		batch_size = args.batch_size, 
 		rp_start = args.rp_initial, 
@@ -158,7 +161,7 @@ def main():
 				raise FileNotFoundError('Checkpoint file cannot be found!')
 
 		if args.rank_priority: 
-			ddqn_rank_train(env, scheduler, optimizer_constructor=optimizer, 
+			ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor=optimizer, 
 			model_type = args.model_type, 
 			batch_size = args.batch_size, 
 			rp_start = args.rp_initial, 
@@ -166,7 +169,7 @@ def main():
 			exp_frame = args.explore_frame, 
 			exp_initial = args.initial_explore, 
 			exp_final = args.final_explore,
-			inital_beta = args.inital_beta,
+			prob_alpha = args.prob_alpha,
 			gamma = args.discount_factor,
 			target_update_steps = args.target_update_steps,
 			frames_per_epoch = args.frames_per_epoch,
@@ -177,7 +180,7 @@ def main():
 
 
 		else:
-			ddqn_train(env, scheduler, optimizer_constructor=optimizer, 
+			ddqn_train(env, exploreScheduler, optimizer_constructor=optimizer, 
 			model_type = args.model_type, 
 			batch_size = args.batch_size, 
 			rp_start = args.rp_initial, 
@@ -198,7 +201,7 @@ def main():
 			if not os.path.isfile(args.last_checkpoint):
 				raise FileNotFoundError('Checkpoint file cannot be found!')
 
-		ddqn_eval(env, scheduler, optimizer_constructor=optimizer, 
+		ddqn_eval(env, exploreScheduler, optimizer_constructor=optimizer, 
 		model_type = args.model_type, 
 		batch_size = args.batch_size, 
 		rp_start = args.rp_initial, 
