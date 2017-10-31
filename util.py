@@ -239,6 +239,7 @@ def initialize_rank_replay(env, rp_start, rp_size, frames_per_state,
 	return exp_replay
 
 
+#TODO: initialize_rank_replay_resume
 
 # def initialize_rank_replay_resume(env, rp_start, rp_size, frames_per_state, 
 # 	model, target, gamma, batch_size):

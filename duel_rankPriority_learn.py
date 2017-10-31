@@ -125,8 +125,8 @@ def duel_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 	print(env.unwrapped.get_action_meanings())
 
 	# initialize action value and target network with the same weights
-	model = DUEL(num_actions, use_bn=False)
-	target = DUEL(num_actions, use_bn=False)
+	model = DUEL(num_actions)
+	target = DUEL(num_actions)
 
 	if use_cuda:
 		model.cuda()
@@ -215,8 +215,20 @@ def duel_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 
 			avgLoss.backward()
 
+			layerIndex = 0
 			for param in model.parameters():
+				#scale the gradient of the last convolution layer by 1/sqrt(2). 
+				if layerIndex == 4: 
+					param.grad.data.mul_(1/math.sqrt(2))
+					
+				#clip the gradients to have their norm less than or equals to 10.
+				gradient_norm = torch.norm(param.grad.data)
+				if gradient_norm > 10:
+					param.grad.data.div_(gradient_norm).mul_(10)
+				
 				param.data += (param.grad.data.mul_(torch.dot(w_batch,loss.data))).mul(optimizer_constructor.kwargs['lr'])
+				layerIndex += 1
+
 		
 		frames_per_episode+= frames_per_state
 
