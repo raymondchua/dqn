@@ -219,13 +219,13 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 			# avgLoss.backward()
 
 			# for param in model.parameters():
-			# 	param.data += (param.grad.data.mul_(torch.dot(w_batch,loss.data))).mul(optimizer_constructor.kwargs['lr'])
-
+			# 	param.data -= (param.grad.data.mul_(torch.dot(w_batch,loss.data))).mul(optimizer_constructor.kwargs['lr'])
+			avgLoss -= avgLoss #negate the loss as we are performing gradient ascent
 			optimizer.zero_grad()
 			avgLoss.backward()
 
 			for param in model.parameters():
-				param.data += (param.grad.data.mul_(torch.dot(w_batch,loss.data))).mul(optimizer_constructor.kwargs['lr'])
+				param.data.grad = (param.grad.data.mul_(torch.dot(w_batch,loss.data))).mul(optimizer_constructor.kwargs['lr'])
 
 			optimizer.step()
 		
