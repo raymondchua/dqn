@@ -222,7 +222,7 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 			# 	param.data += (param.grad.data.mul_(torch.dot(w_batch,loss.data))).mul(optimizer_constructor.kwargs['lr'])
 
 			optimizer.zero_grad()
-			loss.backward()
+			avgLoss.backward()
 
 			for param in model.parameters():
 				param.data += (param.grad.data.mul_(torch.dot(w_batch,loss.data))).mul(optimizer_constructor.kwargs['lr'])
