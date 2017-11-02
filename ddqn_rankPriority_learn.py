@@ -105,6 +105,8 @@ def ddqn_compute_y(batch, batch_size, model, target, gamma):
 
 	return avgloss, loss
 
+	
+
 def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor, model_type, batch_size, rp_start, rp_size, 
 	exp_frame, exp_initial, exp_final, prob_alpha, gamma, target_update_steps, frames_per_epoch, 
 	frames_per_state, output_directory, last_checkpoint, max_frames):
@@ -205,18 +207,27 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 			w_batch = w_batch.type(Tensor)
 
 			batch = Experience(*zip(*obs_samples))
+
 			avgLoss, loss = ddqn_compute_y(batch, num_samples_per_batch, model, target, gamma)
 			loss_abs = torch.abs(loss)
 			exp_replay.update(obs_ranks, loss_abs)
 
-			for param in model.parameters():
-				if param.grad is not None:
-					param.grad.data.zero_()
+			# for param in model.parameters():
+			# 	if param.grad is not None:
+			# 		param.grad.data.zero_()
 
-			avgLoss.backward()
+			# avgLoss.backward()
+
+			# for param in model.parameters():
+			# 	param.data += (param.grad.data.mul_(torch.dot(w_batch,loss.data))).mul(optimizer_constructor.kwargs['lr'])
+
+			optimizer.zero_grad()
+			loss.backward()
 
 			for param in model.parameters():
 				param.data += (param.grad.data.mul_(torch.dot(w_batch,loss.data))).mul(optimizer_constructor.kwargs['lr'])
+
+			optimizer.step()
 		
 		frames_per_episode+= frames_per_state
 
