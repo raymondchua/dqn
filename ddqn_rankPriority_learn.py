@@ -99,11 +99,18 @@ def ddqn_compute_y(batch, batch_size, model, target, gamma):
 
 	y_output =  (next_state_action_values*gamma) + reward_batch.squeeze()
 
-	loss = state_action_values.squeeze() -  y_output
+	# loss = state_action_values.squeeze() -  y_output
 
-	avgloss = torch.sum(loss).div(batch_size)
+	# avgloss = torch.sum(loss).div(batch_size)
 
-	return avgloss, loss
+	# return avgloss, loss
+
+	y_output = y_output.view(batch_size,1)
+	
+	# Compute Huber loss
+	loss = F.smooth_l1_loss(state_action_values, y_output)
+
+	return loss
 
 	
 
@@ -159,6 +166,7 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 	epsiodes_durations = []
 	rewards_per_episode = 0
 	rewards_duration = []
+	loss_per_epoch = []
 
 	
 	current_state, _, _, _ = util.play_game(env, frames_per_state)
@@ -208,9 +216,9 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 
 			batch = Experience(*zip(*obs_samples))
 
-			avgLoss, loss = ddqn_compute_y(batch, num_samples_per_batch, model, target, gamma)
+			loss = ddqn_compute_y(batch, num_samples_per_batch, model, target, gamma)
 			loss_abs = torch.abs(loss)
-			exp_replay.update(obs_ranks, loss_abs)
+			# exp_replay.update(obs_ranks, loss_abs)
 
 			# for param in model.parameters():
 			# 	if param.grad is not None:
@@ -220,14 +228,14 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 
 			# for param in model.parameters():
 			# 	param.data -= (param.grad.data.mul_(torch.dot(w_batch,loss.data))).mul(optimizer_constructor.kwargs['lr'])
-			avgLoss -= avgLoss #negate the loss as we are performing gradient ascent
 			optimizer.zero_grad()
-			avgLoss.backward()
+			loss.backward()
 
 			for param in model.parameters():
-				param.data.grad = (param.grad.data.mul_(torch.dot(w_batch,loss.data))).mul(optimizer_constructor.kwargs['lr'])
+				param.grad.data.clamp_(-1,1)
 
 			optimizer.step()
+			loss_per_epoch.append(loss.data.cpu().numpy())
 		
 		frames_per_episode+= frames_per_state
 
@@ -241,10 +249,11 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 
 			if episodes_count % 100 == 0:
 				avg_episode_reward = sum(rewards_duration)/100.0
-				avg_reward_content = 'Episode from', episodes_count-99, ' to ', episodes_count, ' has an average of ', avg_episode_reward, ' reward.'
+				avg_reward_content = 'Episode from', episodes_count-99, ' to ', episodes_count, ' has an average of ', avg_episode_reward, ' reward and loss of ', sum(loss_per_epoch)
 				print(avg_reward_content)
 				logging.info(avg_reward_content)
 				rewards_duration = []
+				loss_per_epoch = []
 
 		# update weights of target network for every TARGET_UPDATE_FREQ steps
 		if frames_count % target_update_steps == 0:
