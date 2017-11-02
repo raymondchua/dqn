@@ -129,7 +129,7 @@ def ddqn_rankWeight_train(env, exploreScheduler, betaScheduler, optimizer_constr
 	"""
 	
 	gym.undo_logger_setup()
-	logging.basicConfig(filename='ddqn_rank_training.log',level=logging.INFO)
+	logging.basicConfig(filename='ddqn_rank_weightedLoss_training.log',level=logging.INFO)
 	num_actions = env.action_space.n
 	env.reset()
 	
@@ -225,14 +225,6 @@ def ddqn_rankWeight_train(env, exploreScheduler, betaScheduler, optimizer_constr
 			loss_abs = torch.abs(new_weights)
 			exp_replay.update(obs_ranks, loss_abs)
 
-			# for param in model.parameters():
-			# 	if param.grad is not None:
-			# 		param.grad.data.zero_()
-
-			# avgLoss.backward()
-
-			# for param in model.parameters():
-			# 	param.data -= (param.grad.data.mul_(torch.dot(w_batch,loss.data))).mul(optimizer_constructor.kwargs['lr'])
 			optimizer.zero_grad()
 			loss.backward()
 
@@ -269,7 +261,7 @@ def ddqn_rankWeight_train(env, exploreScheduler, betaScheduler, optimizer_constr
 		#Save weights every 250k frames
 		if frames_count % 250000 == 0:
 			util.make_sure_path_exists(output_directory+model_type+'/')
-			torch.save(model.state_dict(), 'rank_weights_'+ str(frames_count)+'.pth')
+			torch.save(model.state_dict(), 'rank_weightedLoss_'+ str(frames_count)+'.pth')
 
 
 		#Print frame count and sort experience replay for every 1000000 (one million) frames:
