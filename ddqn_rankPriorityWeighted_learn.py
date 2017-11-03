@@ -255,7 +255,10 @@ def ddqn_rankWeight_train(env, exploreScheduler, betaScheduler, optimizer_constr
 		# update weights of target network for every TARGET_UPDATE_FREQ steps
 		if frames_count % target_update_steps == 0:
 			target.load_state_dict(model.state_dict())
-			# print('weights updated at frame no. ', frames_count)
+
+		# sort memory replay every half of it's capacity iterations 
+		if frames_count % int(rp_size/2) == 0:
+			exp_replay.sort()
 
 
 		#Save weights every 250k frames
@@ -269,7 +272,7 @@ def ddqn_rankWeight_train(env, exploreScheduler, betaScheduler, optimizer_constr
 			training_update = 'frame count: ', frames_count, 'episode count: ', episodes_count, 'epsilon: ', epsilon
 			print(training_update)
 			logging.info(training_update)
-			exp_replay.sort()
+			
 
 
 
