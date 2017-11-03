@@ -263,8 +263,8 @@ def ddqn_rankWeight_train(env, exploreScheduler, betaScheduler, optimizer_constr
 
 		#Save weights every 250k frames
 		if frames_count % 250000 == 0:
-			util.make_sure_path_exists(output_directory+model_type+'/')
-			torch.save(model.state_dict(), 'rank_weightedLoss_'+ str(frames_count)+'.pth')
+			util.make_sure_path_exists(output_directory+'/')
+			torch.save(model.state_dict(), output_directory+'/rank_weightedLoss_'+ str(frames_count)+'.pth')
 
 
 		#Print frame count and sort experience replay for every 1000000 (one million) frames:
