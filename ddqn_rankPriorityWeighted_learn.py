@@ -113,6 +113,15 @@ def ddqn_compute_y(batch, batch_size, model, target, gamma, weights, loss):
 	# loss = F.smooth_l1_loss(state_action_values, y_output)
 	lossVal = loss(state_action_values, y_output, weights_var)
 
+	currentLOSS = lossVal.data.cpu().numpy()[0]
+
+	if math.isnan(currentLOSS):
+		print('NAN detected!!')
+		print('state: ', state_action_values)
+		print('target: ', y_output)
+		print('weights: ', weights_var)
+
+
 	return lossVal, new_weights
 
 	
