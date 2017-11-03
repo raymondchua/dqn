@@ -115,7 +115,7 @@ def ddqn_compute_y(batch, batch_size, model, target, gamma, weights, loss):
 
 	currentLOSS = lossVal.data.cpu().numpy()[0]
 
-	if math.isnan(currentLOSS):
+	if np.isnan(currentLOSS) or np.isinf(currentLOSS):
 		print('NAN detected!!')
 		print('state: ', state_action_values)
 		print('target: ', y_output)
