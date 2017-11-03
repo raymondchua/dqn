@@ -218,7 +218,7 @@ def ddqn_rankWeight_train(env, exploreScheduler, betaScheduler, optimizer_constr
 			max_weight = exp_replay.get_max_weight(beta)
 			w_batch /= max_weight
 			w_batch = w_batch.type(Tensor)
-
+			
 			batch = Experience(*zip(*obs_samples))
 
 			loss, new_weights = ddqn_compute_y(batch, num_samples_per_batch, model, target, gamma, w_batch, wLoss_func)
