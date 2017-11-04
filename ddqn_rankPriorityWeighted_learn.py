@@ -234,6 +234,14 @@ def ddqn_rankWeight_train(env, exploreScheduler, betaScheduler, optimizer_constr
 			loss_abs = torch.abs(new_weights)
 			exp_replay.update(obs_ranks, loss_abs)
 
+			currentLOSS = loss.data.cpu().numpy()[0]
+
+			if np.isnan(currentLOSS) or np.isinf(currentLOSS):
+				print('NAN detected!!')
+				print('priority: ', obs_priorityVals)
+				print('max weight: ', max_weight)
+				print('norm weights: ', w_batch)
+
 			optimizer.zero_grad()
 			loss.backward()
 
