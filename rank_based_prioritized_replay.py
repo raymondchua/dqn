@@ -130,7 +130,13 @@ class RankBasedPrioritizedReplay(object):
 				choice = random.randint(i, len(self.memory)-1)
 			samples_list.append(self.memory[choice])
 			rank_list.append(choice)
-			priority_list.append((self.priorityWeights[choice]/total))
+
+			priorW = self.priorityWeights[choice]/total
+
+			if priorW == 0.0:
+				priorW = 1e-8
+
+			priority_list.append(priorW)
 
 		return samples_list, rank_list, priority_list
 
@@ -155,10 +161,10 @@ class RankBasedPrioritizedReplay(object):
 
 	def get_max_weight(self, beta):
 		total = self.prioritySum
-		minVal = (self.minPriority/total)+1e-6
+		minVal = (self.minPriority/total)+1e-8
 
-		if 1/minVal < 1e-6:
-			minValFactor = 1e-6
+		if 1/minVal < 1e-8:
+			minValFactor = 1e-8
 
 		else:
 			minValFactor = 1/minVal

@@ -115,11 +115,11 @@ def ddqn_compute_y(batch, batch_size, model, target, gamma, weights, loss):
 
 	currentLOSS = lossVal.data.cpu().numpy()[0]
 
-	if np.isnan(currentLOSS) or np.isinf(currentLOSS):
-		print('NAN detected!!')
-		print('state: ', state_action_values)
-		print('target: ', y_output)
-		print('weights: ', weights_var)
+	# if np.isnan(currentLOSS) or np.isinf(currentLOSS):
+	# 	print('NAN detected!!')
+	# 	print('state: ', state_action_values)
+	# 	print('target: ', y_output)
+	# 	print('weights: ', weights_var)
 
 
 	return lossVal, new_weights
@@ -212,7 +212,7 @@ def ddqn_rankWeight_train(env, exploreScheduler, betaScheduler, optimizer_constr
 		td_error = ddqn_compute_td_error(batch_size=1, state_batch=current_state_ex, reward_batch=reward_ex, action_batch=action_ex, 
 			next_state_batch=curr_obs_ex, model=model, target=target, gamma=gamma)
 
-		td_error = torch.pow(torch.abs(td_error)+1e-6, prob_alpha)
+		td_error = torch.pow(torch.abs(td_error)+1e-8, prob_alpha)
 		exp_replay.push(current_state, action, reward, curr_obs, td_error)
 		current_state = curr_obs
 
@@ -223,9 +223,9 @@ def ddqn_rankWeight_train(env, exploreScheduler, betaScheduler, optimizer_constr
 			num_samples_per_batch = len(obs_samples)
 			obs_priorityTensor = torch.from_numpy(np.array(obs_priorityVals))
 			p_batch = 1/ obs_priorityTensor
-			w_batch = (1/len(exp_replay) * p_batch)**beta
+			w_batch_raw = (1/len(exp_replay) * p_batch)**beta
 			max_weight = exp_replay.get_max_weight(beta)
-			w_batch /= max_weight
+			w_batch = w_batch_raw/max_weight
 			w_batch = w_batch.type(Tensor)
 			
 			batch = Experience(*zip(*obs_samples))
@@ -236,11 +236,12 @@ def ddqn_rankWeight_train(env, exploreScheduler, betaScheduler, optimizer_constr
 
 			currentLOSS = loss.data.cpu().numpy()[0]
 
-			if np.isnan(currentLOSS) or np.isinf(currentLOSS):
-				print('NAN detected!!')
-				print('priority: ', obs_priorityVals)
-				print('max weight: ', max_weight)
-				print('norm weights: ', w_batch)
+			# if np.isnan(currentLOSS) or np.isinf(currentLOSS):
+			# 	print('NAN detected!!')
+			# 	print('priority: ', obs_priorityVals)
+			# 	print('max weight: ', max_weight)
+			# 	print('weights beta: ', w_batch_raw)
+			# 	print('norm weights: ', w_batch)
 
 			optimizer.zero_grad()
 			loss.backward()
@@ -249,7 +250,7 @@ def ddqn_rankWeight_train(env, exploreScheduler, betaScheduler, optimizer_constr
 				param.grad.data.clamp_(-1,1)
 
 			optimizer.step()
-			loss_per_epoch.append(loss.data.cpu().numpy())
+			loss_per_epoch.append(loss.data.cpu().numpy()[0])
 		
 		frames_per_episode+= frames_per_state
 
