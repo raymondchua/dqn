@@ -58,7 +58,6 @@ parser.add_argument('--explore_frame',			type=int, 	help='Num of frames over whi
 parser.add_argument('--learning_rate', 			type=float, help='Learning rate', default=0.00025)
 parser.add_argument('--output_directory',		type=str,	help='Output directory to save weights, if empty, outputs to a local folder named \'saved_weights\'', default='./saved_weights/')
 parser.add_argument('--last_checkpoint',		type=str,	help='Last saved weights that you wish to use to either resume training or for eval.', default='')
-parser.add_argument('--rank_priority',						help='Use rank prioritized replay memory if true', action="store_true", default=False)
 parser.add_argument('--rank_priority_weights',				help='Use rank prioritized replay memory with weights if true', action="store_true", default=False)
 
 args = parser.parse_args()
@@ -163,25 +162,8 @@ def main():
 			if not os.path.isfile(args.last_checkpoint):
 				raise FileNotFoundError('Checkpoint file cannot be found!')
 
-		if args.rank_priority: 
-			ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor=optimizer, 
-			model_type = args.model_type, 
-			batch_size = args.batch_size, 
-			rp_start = args.rp_initial, 
-			rp_size = args.rp_capacity, 
-			exp_frame = args.explore_frame, 
-			exp_initial = args.initial_explore, 
-			exp_final = args.final_explore,
-			prob_alpha = args.prob_alpha,
-			gamma = args.discount_factor,
-			target_update_steps = args.target_update_steps,
-			frames_per_epoch = args.frames_per_epoch,
-			frames_per_state = args.frames_per_state,
-			output_directory = args.output_directory,
-			last_checkpoint = args.last_checkpoint,
-			max_frames=args.max_frames)
-
-		elif args.rank_priority_weights: 
+	
+		if args.rank_priority_weights: 
 			ddqn_rankWeight_train(env, exploreScheduler, betaScheduler, optimizer_constructor=optimizer, 
 			model_type = args.model_type, 
 			batch_size = args.batch_size, 
@@ -245,7 +227,7 @@ def main():
 			if not os.path.isfile(args.last_checkpoint):
 				raise FileNotFoundError('Checkpoint file cannot be found!')
 
-		if args.rank_priority: 
+		if args.rank_priority_weights: 
 			duel_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor=optimizer, 
 			model_type = args.model_type, 
 			batch_size = args.batch_size, 
@@ -262,6 +244,8 @@ def main():
 			output_directory = args.output_directory,
 			last_checkpoint = args.last_checkpoint,
 			max_frames=args.max_frames)
+
+	#TODO: create duel rank eval
 
 	print("pass...")
 

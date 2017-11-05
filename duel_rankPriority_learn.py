@@ -7,8 +7,6 @@ from gym import wrappers
 import math
 import random
 import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
 from collections import namedtuple
 from itertools import count
 from copy import deepcopy
@@ -20,15 +18,14 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.autograd import Variable
-import torchvision.transforms as T
-
 
 from rank_based_prioritized_replay import RankBasedPrioritizedReplay, Experience
 from dueling_model import DUEL
 import util
-
-
 import time
+
+from WeightedLoss import Weighted_Loss
+
 
 Optimizer = namedtuple("Optimizer", ["type", "kwargs"])
 
@@ -40,9 +37,6 @@ LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
 ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
 Tensor = FloatTensor
 
-#Hyperparameters for validation
-NUM_GAMES = 30
-MAX_FRAMES_PER_GAME = 520000
 
 def duel_compute_td_error(batch_size=32, state_batch=None, reward_batch=None, action_batch=None, next_state_batch=None,
 	model=None, target=None, gamma=0.99):
@@ -72,7 +66,7 @@ def duel_compute_td_error(batch_size=32, state_batch=None, reward_batch=None, ac
 	return loss
 	
 
-def duel_compute_y(batch, batch_size, model, target, gamma):
+def duel_compute_y(batch, batch_size, model, target, gamma, weights, loss):
 	"""
 	Compute the Double Q learning error as based on the paper, 
 	"Deep Reinforcement Learning with Double Q-learning" by Hado van Hasselt and
@@ -87,6 +81,8 @@ def duel_compute_y(batch, batch_size, model, target, gamma):
 	reward_batch = Variable(torch.cat(batch.reward)) 
 	action_batch = Variable(torch.cat(batch.action))
 
+	weights_var = Variable(weights)
+
 	#compute Q(s,a) based on the action taken
 	state_action_values = model(state_batch).gather(1,action_batch)
 
@@ -99,11 +95,13 @@ def duel_compute_y(batch, batch_size, model, target, gamma):
 
 	y_output =  (next_state_action_values*gamma) + reward_batch.squeeze()
 
-	loss = state_action_values.squeeze() -  y_output
+	new_weights = state_action_values.squeeze() -  y_output
 
-	avgloss = torch.sum(loss).div(batch_size)
+	y_output = y_output.view(batch_size,1)
+	
+	lossVal = loss(state_action_values, y_output, weights_var)
 
-	return avgloss, loss
+	return lossVal, new_weights
 
 def duel_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor, model_type, batch_size, rp_start, rp_size, 
 	exp_frame, exp_initial, exp_final, prob_alpha, gamma, target_update_steps, frames_per_epoch, 
@@ -157,6 +155,8 @@ def duel_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 	epsiodes_durations = []
 	rewards_per_episode = 0
 	rewards_duration = []
+	loss_per_epoch = []
+	wLoss_func = Weighted_Loss()
 
 	
 	current_state, _, _, _ = util.play_game(env, frames_per_state)
@@ -205,30 +205,21 @@ def duel_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 			w_batch = w_batch.type(Tensor)
 
 			batch = Experience(*zip(*obs_samples))
-			avgLoss, loss = duel_compute_y(batch, num_samples_per_batch, model, target, gamma)
-			loss_abs = torch.abs(loss)
+
+			loss, new_weights = duel_compute_y(batch, num_samples_per_batch, model, target, gamma, w_batch, wLoss_func)
+			loss_abs = torch.abs(new_weights)
 			exp_replay.update(obs_ranks, loss_abs)
 
+			currentLOSS = loss.data.cpu().numpy()[0]
+
+			optimizer.zero_grad()
+			loss.backward()
+
 			for param in model.parameters():
-				if param.grad is not None:
-					param.grad.data.zero_()
+				param.grad.data.clamp_(-1,1)
 
-			avgLoss.backward()
-
-			layerIndex = 0
-			for param in model.parameters():
-				#scale the gradient of the last convolution layer by 1/sqrt(2). 
-				if layerIndex == 4: 
-					param.grad.data.mul_(1/math.sqrt(2))
-					
-				#clip the gradients to have their norm less than or equals to 10.
-				gradient_norm = torch.norm(param.grad.data)
-				if gradient_norm > 10:
-					param.grad.data.div_(gradient_norm).mul_(10)
-				
-				param.data += (param.grad.data.mul_(torch.dot(w_batch,loss.data))).mul(optimizer_constructor.kwargs['lr'])
-				layerIndex += 1
-
+			optimizer.step()
+			loss_per_epoch.append(loss.data.cpu().numpy()[0])
 		
 		frames_per_episode+= frames_per_state
 
@@ -242,21 +233,26 @@ def duel_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 
 			if episodes_count % 100 == 0:
 				avg_episode_reward = sum(rewards_duration)/100.0
-				avg_reward_content = 'Episode from', episodes_count-99, ' to ', episodes_count, ' has an average of ', avg_episode_reward, ' reward.'
+				avg_reward_content = 'Episode from', episodes_count-99, ' to ', episodes_count, ' has an average of ', avg_episode_reward, ' reward and loss of ', sum(loss_per_epoch)
 				print(avg_reward_content)
 				logging.info(avg_reward_content)
 				rewards_duration = []
+				loss_per_epoch = []
 
 		# update weights of target network for every TARGET_UPDATE_FREQ steps
 		if frames_count % target_update_steps == 0:
 			target.load_state_dict(model.state_dict())
 			# print('weights updated at frame no. ', frames_count)
 
+		# sort memory replay every half of it's capacity iterations 
+		if frames_count % int(rp_size/2) == 0:
+			exp_replay.sort()
+	
 
 		#Save weights every 250k frames
 		if frames_count % 250000 == 0:
-			util.make_sure_path_exists(output_directory+model_type+'/')
-			torch.save(model.state_dict(), 'rank_weights_'+ str(frames_count)+'.pth')
+			util.make_sure_path_exists(output_directory+'/')
+			torch.save(model.state_dict(), output_directory+'/rank_duel_'+ str(frames_count)+'.pth')
 
 
 		#Print frame count and sort experience replay for every 1000000 (one million) frames:
@@ -264,7 +260,6 @@ def duel_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 			training_update = 'frame count: ', frames_count, 'episode count: ', episodes_count, 'epsilon: ', epsilon
 			print(training_update)
 			logging.info(training_update)
-			exp_replay.sort()
 
 
 

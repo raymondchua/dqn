@@ -133,7 +133,7 @@ class RankBasedPrioritizedReplay(object):
 
 			priorW = self.priorityWeights[choice]/total
 
-			if priorW == 0.0:
+			if priorW < 1e-8:
 				priorW = 1e-8
 
 			priority_list.append(priorW)

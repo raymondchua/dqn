@@ -7,8 +7,6 @@ from gym import wrappers
 import math
 import random
 import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
 from collections import namedtuple
 from itertools import count
 from copy import deepcopy
@@ -103,24 +101,9 @@ def ddqn_compute_y(batch, batch_size, model, target, gamma, weights, loss):
 
 	new_weights = state_action_values.squeeze() -  y_output
 
-	# avgloss = torch.sum(loss).div(batch_size)
-
-	# return avgloss, loss
-
 	y_output = y_output.view(batch_size,1)
 	
-	# Compute Huber loss
-	# loss = F.smooth_l1_loss(state_action_values, y_output)
 	lossVal = loss(state_action_values, y_output, weights_var)
-
-	currentLOSS = lossVal.data.cpu().numpy()[0]
-
-	# if np.isnan(currentLOSS) or np.isinf(currentLOSS):
-	# 	print('NAN detected!!')
-	# 	print('state: ', state_action_values)
-	# 	print('target: ', y_output)
-	# 	print('weights: ', weights_var)
-
 
 	return lossVal, new_weights
 
@@ -179,7 +162,6 @@ def ddqn_rankWeight_train(env, exploreScheduler, betaScheduler, optimizer_constr
 	rewards_per_episode = 0
 	rewards_duration = []
 	loss_per_epoch = []
-
 	wLoss_func = Weighted_Loss()
 
 	
