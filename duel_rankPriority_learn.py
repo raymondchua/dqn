@@ -215,8 +215,22 @@ def duel_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 			optimizer.zero_grad()
 			loss.backward()
 
+			
+			grad_index = 0
 			for param in model.parameters():
-				param.grad.data.clamp_(-1,1)
+
+				#Clip the combined gradient entering the last conv layer by 1/sqrt(2)
+				if grad_index == 4:
+					param.grad.data.mul_(1/sqrt(2))
+
+				#Clip gradients to have their norm less than or equal to 10 
+				grad_norm = torch.norm(param.grad.data)
+				if grad_norm > 10: 
+					param.grad.data.div_(grad_norm).mul_(10)
+
+				grad_index += 1
+
+
 
 			optimizer.step()
 			loss_per_epoch.append(loss.data.cpu().numpy()[0])
