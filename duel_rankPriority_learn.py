@@ -221,7 +221,7 @@ def duel_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 
 				#Clip the combined gradient entering the last conv layer by 1/sqrt(2)
 				if grad_index == 4:
-					param.grad.data.mul_(1/sqrt(2))
+					param.grad.data.mul_(1/math.sqrt(2))
 
 				#Clip gradients to have their norm less than or equal to 10 
 				grad_norm = torch.norm(param.grad.data)
