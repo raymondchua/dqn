@@ -228,8 +228,8 @@ def ddqn_rankWeight_train(env, exploreScheduler, betaScheduler, optimizer_constr
 			optimizer.zero_grad()
 			loss.backward()
 
-			for param in model.parameters():
-				param.grad.data.clamp_(-1,1)
+			# for param in model.parameters():
+			# 	param.grad.data.clamp_(-1,1)
 
 			optimizer.step()
 			loss_per_epoch.append(loss.data.cpu().numpy()[0])

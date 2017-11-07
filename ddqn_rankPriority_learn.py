@@ -218,21 +218,12 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 
 			loss = ddqn_compute_y(batch, num_samples_per_batch, model, target, gamma)
 			loss_abs = torch.abs(loss)
-			# exp_replay.update(obs_ranks, loss_abs)
-
-			# for param in model.parameters():
-			# 	if param.grad is not None:
-			# 		param.grad.data.zero_()
-
-			# avgLoss.backward()
-
-			# for param in model.parameters():
-			# 	param.data -= (param.grad.data.mul_(torch.dot(w_batch,loss.data))).mul(optimizer_constructor.kwargs['lr'])
+			
 			optimizer.zero_grad()
 			loss.backward()
 
-			for param in model.parameters():
-				param.grad.data.clamp_(-1,1)
+			# for param in model.parameters():
+			# 	param.grad.data.clamp_(-1,1)
 
 			optimizer.step()
 			loss_per_epoch.append(loss.data.cpu().numpy())
