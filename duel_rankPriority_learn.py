@@ -62,6 +62,7 @@ def duel_compute_td_error(batch_size=32, state_batch=None, reward_batch=None, ac
 	y_output = y_output.squeeze()
 
 	loss =  (y_output - state_action_values).squeeze()
+	loss = torch.clamp(loss, -1, 1)
 
 	return loss
 	
@@ -96,6 +97,7 @@ def duel_compute_y(batch, batch_size, model, target, gamma, weights, loss):
 	y_output =  (next_state_action_values*gamma) + reward_batch.squeeze()
 
 	new_weights = state_action_values.squeeze() -  y_output
+	new_weights = torch.clamp(new_weights, -1, 1)
 
 	y_output = y_output.view(batch_size,1)
 	
