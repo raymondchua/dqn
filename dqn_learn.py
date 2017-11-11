@@ -193,8 +193,8 @@ def dqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 
 		#Save weights every 250k frames
 		if frames_count % 250000 == 0:
-			util.make_sure_path_exists(output_directory+'/'+envo+'/')
-			torch.save(model.state_dict(), output_directory+envo+'_'+model_type+'/weights_'+ str(frames_count)+'.pth')
+			util.make_sure_path_exists(output_directory+envo+'/'+model_type+'/')
+			torch.save(model.state_dict(), output_directory+envo+'/'+model_type+'/weights_'+ str(frames_count)+'.pth')
 
 
 		#Print frame count for every 1000000 (one million) frames:
