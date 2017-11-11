@@ -113,7 +113,7 @@ def dqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 	epsiodes_durations = []
 	rewards_per_episode = 0
 	rewards_duration = []
-
+	loss_per_epoch = []
 
 	env.reset()
 
@@ -162,6 +162,8 @@ def dqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 				param.grad.data.clamp_(-1,1)
 
 			optimizer.step()
+
+			loss_per_epoch.append(loss.data.cpu().numpy()[0])
 			
 
 		frames_count+= 1
