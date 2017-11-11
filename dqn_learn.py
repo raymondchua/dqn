@@ -73,10 +73,10 @@ def dqn_compute_y(batch, batch_size, model, target, gamma):
 
 def dqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_start, rp_size, 
 	exp_frame, exp_initial, exp_final, gamma, target_update_steps, frames_per_epoch, 
-	frames_per_state, output_directory, last_checkpoint):
+	frames_per_state, output_directory, last_checkpoint, envo):
 	
 	gym.undo_logger_setup()
-	logging.basicConfig(filename=model_type+'_training.log',level=logging.INFO)
+	logging.basicConfig(filename=envo+'_'+model_type+'_training.log',level=logging.INFO)
 	num_actions = env.action_space.n
 	
 	print('No. of actions: ', num_actions)
@@ -191,7 +191,8 @@ def dqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 
 		#Save weights every 250k frames
 		if frames_count % 250000 == 0:
-			torch.save(model.state_dict(), output_directory+model_type+'/weights_'+ str(frames_count)+'.pth')
+			util.make_sure_path_exists(output_directory+'/'+envo+'/')
+			torch.save(model.state_dict(), output_directory+envo+'_'+model_type+'/weights_'+ str(frames_count)+'.pth')
 
 
 		#Print frame count for every 1000000 (one million) frames:

@@ -80,7 +80,7 @@ def ddqn_eval(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 	env.seed(7)
 	random.seed(7)
 	gym.undo_logger_setup()
-	logging.basicConfig(filename='ddqn_eval.log',level=logging.INFO)
+	logging.basicConfig(filename=envo+'_'+'ddqn_eval.log',level=logging.INFO)
 	num_actions = env.action_space.n
 	
 	print('No. of actions: ', num_actions)

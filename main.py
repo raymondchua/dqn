@@ -132,7 +132,8 @@ def main():
 		frames_per_epoch = args.frames_per_epoch,
 		frames_per_state = args.frames_per_state,
 		output_directory = args.output_directory,
-		last_checkpoint = args.last_checkpoint)
+		last_checkpoint = args.last_checkpoint,
+		envo=args.environment)
 
 	elif args.model_type == 'dqn' and args.mode == 'eval' and args.era == 'new':
 
@@ -154,7 +155,8 @@ def main():
 		frames_per_epoch = args.frames_per_epoch,
 		frames_per_state = args.frames_per_state,
 		output_directory = args.output_directory,
-		last_checkpoint = args.last_checkpoint)
+		last_checkpoint = args.last_checkpoint,
+		envo=args.environment)
 
 	elif args.model_type == 'ddqn' and args.mode == 'train':
 
@@ -179,7 +181,8 @@ def main():
 			frames_per_state = args.frames_per_state,
 			output_directory = args.output_directory,
 			last_checkpoint = args.last_checkpoint,
-			max_frames=args.max_frames)
+			max_frames=args.max_frames,
+			envo=args.environment)
 
 
 		else:
@@ -196,7 +199,8 @@ def main():
 			frames_per_epoch = args.frames_per_epoch,
 			frames_per_state = args.frames_per_state,
 			output_directory = args.output_directory,
-			last_checkpoint = args.last_checkpoint)
+			last_checkpoint = args.last_checkpoint,
+			envo=args.environment)
 
 	elif args.model_type == 'ddqn' and args.mode == 'eval':
 
@@ -219,7 +223,8 @@ def main():
 		frames_per_epoch = args.frames_per_epoch,
 		frames_per_state = args.frames_per_state,
 		output_directory = args.output_directory,
-		last_checkpoint = args.last_checkpoint)
+		last_checkpoint = args.last_checkpoint,
+		envo=args.environment)
 
 	elif args.model_type == 'duel' and args.mode == 'train':
 
@@ -243,7 +248,8 @@ def main():
 			frames_per_state = args.frames_per_state,
 			output_directory = args.output_directory,
 			last_checkpoint = args.last_checkpoint,
-			max_frames=args.max_frames)
+			max_frames=args.max_frames,
+			envo=args.environment)
 
 	#TODO: create duel rank eval
 

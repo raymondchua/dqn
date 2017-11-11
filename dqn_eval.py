@@ -73,12 +73,12 @@ def compute_y(batch, batch_size, model, target, gamma):
 
 def dqn_eval(env, scheduler, optimizer_constructor, model_type, batch_size, rp_start, rp_size, 
 	exp_frame, exp_initial, exp_final, gamma, target_update_steps, frames_per_epoch, 
-	frames_per_state, output_directory, last_checkpoint):
+	frames_per_state, output_directory, last_checkpoint, envo):
 	
 	env.seed(7)
 	random.seed(7)
 	gym.undo_logger_setup()
-	logging.basicConfig(filename='dqn_eval.log',level=logging.INFO)
+	logging.basicConfig(filename=envo+'_'+model_type+'_eval.log',level=logging.INFO)
 	num_actions = env.action_space.n
 	
 	print('No. of actions: ', num_actions)

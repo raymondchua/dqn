@@ -113,7 +113,7 @@ def ddqn_compute_y(batch, batch_size, model, target, gamma, weights, loss):
 
 def ddqn_rankWeight_train(env, exploreScheduler, betaScheduler, optimizer_constructor, model_type, batch_size, rp_start, rp_size, 
 	exp_frame, exp_initial, exp_final, prob_alpha, gamma, target_update_steps, frames_per_epoch, 
-	frames_per_state, output_directory, last_checkpoint, max_frames):
+	frames_per_state, output_directory, last_checkpoint, max_frames, envo):
 
 	"""
 	Implementation of the training algorithm for DDQN using Rank-based prioritization.
@@ -123,7 +123,7 @@ def ddqn_rankWeight_train(env, exploreScheduler, betaScheduler, optimizer_constr
 	"""
 	
 	gym.undo_logger_setup()
-	logging.basicConfig(filename='ddqn_rank_weightedLoss_training.log',level=logging.INFO)
+	logging.basicConfig(filename=envo+'_'+'ddqn_rank_weightedLoss_training.log',level=logging.INFO)
 	num_actions = env.action_space.n
 	env.reset()
 	
@@ -218,15 +218,6 @@ def ddqn_rankWeight_train(env, exploreScheduler, betaScheduler, optimizer_constr
 			loss_abs = torch.abs(new_weights)
 			exp_replay.update(obs_ranks, loss_abs)
 
-			currentLOSS = loss.data.cpu().numpy()[0]
-
-			# if np.isnan(currentLOSS) or np.isinf(currentLOSS):
-			# 	print('NAN detected!!')
-			# 	print('priority: ', obs_priorityVals)
-			# 	print('max weight: ', max_weight)
-			# 	print('weights beta: ', w_batch_raw)
-			# 	print('norm weights: ', w_batch)
-
 			optimizer.zero_grad()
 			loss.backward()
 
@@ -265,8 +256,8 @@ def ddqn_rankWeight_train(env, exploreScheduler, betaScheduler, optimizer_constr
 
 		#Save weights every 250k frames
 		if frames_count % 250000 == 0:
-			util.make_sure_path_exists(output_directory+'/')
-			torch.save(model.state_dict(), output_directory+'/rank_weightedLoss_'+ str(frames_count)+'.pth')
+			util.make_sure_path_exists(output_directory+'/'+envo+'/')
+			torch.save(model.state_dict(), output_directory+'/'+envo+'/rank_weightedLoss_'+ str(frames_count)+'.pth')
 
 
 		#Print frame count and sort experience replay for every 1000000 (one million) frames:
