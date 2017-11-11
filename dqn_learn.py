@@ -26,8 +26,7 @@ from torch.autograd import Variable
 from replay_memory import ExpReplay, Experience
 from dqn_model import DQN
 from scheduler import Scheduler
-from util import *
-
+import util
 import time
 
 Optimizer = namedtuple("Optimizer", ["type", "kwargs"])
@@ -96,11 +95,11 @@ def dqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 
 	if last_checkpoint != '':
 		model.load_state_dict(torch.load(last_checkpoint))
-		exp_replay = initialize_replay_resume(env, rp_start, rp_size, frames_per_state, model)
+		exp_replay = util.initialize_replay_resume(env, rp_start, rp_size, frames_per_state, model)
 		episodes_count = get_index_from_checkpoint_path(last_checkpoint)
 
 	else:
-		exp_replay = initialize_replay(env, rp_start, rp_size, frames_per_state)
+		exp_replay = util.initialize_replay(env, rp_start, rp_size, frames_per_state)
 
 	target.load_state_dict(model.state_dict())
 	print('weights loaded...')
@@ -117,7 +116,7 @@ def dqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 
 	env.reset()
 
-	current_state, _, _, _ = play_game(env, frames_per_state)
+	current_state, _, _, _ = util.play_game(env, frames_per_state)
 
 	print('Starting training...')
 
@@ -136,7 +135,7 @@ def dqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 			action = get_greedy_action(model, current_state)
 
 		
-		curr_obs, reward, done, _ = play_game(env, frames_per_state, action[0][0])
+		curr_obs, reward, done, _ = util.play_game(env, frames_per_state, action[0][0])
 
 		rewards_per_episode += reward
 		reward = Tensor([reward])
@@ -175,7 +174,7 @@ def dqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 			frames_per_episode=1
 			episodes_count+=1
 			env.reset()
-			current_state, _, _, _ = play_game(env, frames_per_state)
+			current_state, _, _, _ = util.play_game(env, frames_per_state)
 
 			if episodes_count % 100 == 0:
 				avg_episode_reward = sum(rewards_duration)/100.0
