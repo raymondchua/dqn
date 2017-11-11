@@ -132,7 +132,7 @@ def dqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 			action = LongTensor([[random.randrange(num_actions)]])
 
 		else:
-			action = get_greedy_action(model, current_state)
+			action = util.get_greedy_action(model, current_state)
 
 		
 		curr_obs, reward, done, _ = util.play_game(env, frames_per_state, action[0][0])
