@@ -9,7 +9,7 @@ import torch
 from torch.autograd import Variable
 
 from replay_memory import ExpReplay
-from rank_based_prioritized_replay import RankBasedPrioritizedReplay, Experience
+from rank_based_prioritized_replay import RankBasedPrioritizedReplay
 from ddqn_rankPriority_learn import ddqn_compute_y, ddqn_compute_td_error
 
 use_cuda = torch.cuda.is_available()
