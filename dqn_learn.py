@@ -183,6 +183,7 @@ def dqn_train(env, scheduler, optimizer_constructor, model_type, batch_size, rp_
 				print(avg_reward_content)
 				logging.info(avg_reward_content)
 				rewards_duration = []
+				loss_per_epoch = []
 			
 
 		# update weights of target network for every TARGET_UPDATE_FREQ steps
