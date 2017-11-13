@@ -100,6 +100,7 @@ class RankBasedPrioritizedReplay(object):
 		priority_list = []
 		segment_size = (len(self.memory)+1)//batch_size
 		index = list(range(1,len(self.memory),segment_size))
+		total = self.prioritySum
 
 		for i in index:
 			if i + segment_size < len(self.memory):
@@ -109,9 +110,7 @@ class RankBasedPrioritizedReplay(object):
 			samples_list.append(self.memory[choice])
 			rank_list.append(choice)
 
-			priorW = self.memory[choice].td_error/self.prioritySum
-
-			print(priorW)
+			priorW = self.priorityWeights[choice]/total
 
 			if priorW < 1e-8:
 				priorW = 1e-8
