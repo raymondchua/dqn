@@ -149,4 +149,16 @@ class RankBasedPrioritizedReplay(object):
 	def get_experience(self, index):
 		return self.memory[index]
 
+	def get_max_weight(self, beta):
+		total = self.prioritySum
+		minVal = (self.minPriority/total)+1e-8
+
+		if 1/minVal < 1e-8:
+			minValFactor = 1e-8
+
+		else:
+			minValFactor = 1/minVal
+
+		return ((1/(len(self.memory))) * minValFactor) ** beta
+
 
