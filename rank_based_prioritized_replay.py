@@ -74,14 +74,14 @@ class RankBasedPrioritizedReplay(object):
 			self.memory[self.position] = Experience(state, action, reward, next_state, td_error)
 			self.priorityWeights[self.position] = td_error.data[0]
 			self.prioritySum += td_error.data[0]
-			self.position = ((self.position + 1) % (self.capacity/2))
-			# if self.position == 0:
-			# 	self.position = 1
+			self.position = (self.position + 1) % (self.capacity)
+			if self.position == 0:
+				self.position = 1
 			if self.minPriority > td_error.data[0]:
 				self.minPriority = td_error.data[0]
 
 	def sort(self):
-		i = len(self.sorted_memory) // 2
+		i = len(self.memory) // 2
 		while(i > 0):
 			self.percDown(i)
 			i -= 1
