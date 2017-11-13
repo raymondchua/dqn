@@ -111,6 +111,8 @@ class RankBasedPrioritizedReplay(object):
 
 			priorW = self.memory[choice].td_error/self.prioritySum
 
+			print(priorW)
+
 			if priorW < 1e-8:
 				priorW = 1e-8
 
