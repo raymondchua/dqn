@@ -1,32 +1,14 @@
 from __future__ import print_function, division
 
-import gym
 import math
 import random
 import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
 from collections import namedtuple
-from itertools import count
 import time
-import copy
 
 import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
-from torch.autograd import Variable
-import torchvision.transforms as T
 
 Experience = namedtuple('Experience', ('state', 'action', 'reward','next_state', 'td_error'))
-
-# if gpu is to be used
-use_cuda = torch.cuda.is_available()
-FloatTensor = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
-IntTensor = torch.cuda.IntTensor if use_cuda else torch.IntTensor
-LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
-ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
-Tensor = FloatTensor
 
 class RankBasedPrioritizedReplay(object):
 	"""
@@ -85,8 +67,6 @@ class RankBasedPrioritizedReplay(object):
 		while(i > 0):
 			self.percDown(i)
 			i -= 1
-
-		self.updatePrioritySumAndMinPriority(self.memory)
 
 	def percDown(self, i):
 		while(i * 2) <= len(self.memory):
