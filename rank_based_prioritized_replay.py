@@ -145,7 +145,7 @@ class RankBasedPrioritizedReplay(object):
 		for key, value in self.sorted_memory.items():
 			self.prioritySum += value.td_error
 
-			if self.minPriority == None:
+			if self.minPriority is None:
 				self.minPriority = value.td_error
 
 			elif value.td_error < self.minPriority:
