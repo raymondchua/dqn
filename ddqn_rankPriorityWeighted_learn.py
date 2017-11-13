@@ -145,9 +145,10 @@ def ddqn_rankWeight_train(env, exploreScheduler, betaScheduler, optimizer_constr
 		print(last_checkpoint)
 		print('weights loaded...')
 
-		exp_replay = util.initialize_rank_replay_resume(env, rp_start, rp_size, frames_per_state, 
-			model, target, gamma, batch_size)
-		frames_count = get_index_from_checkpoint_path(last_checkpoint)
+		#TODO: Implementation of resume
+		# exp_replay = util.initialize_rank_replay_resume(env, rp_start, rp_size, frames_per_state, 
+		# 	model, target, gamma, batch_size)
+		# frames_count = get_index_from_checkpoint_path(last_checkpoint)
 
 	else:
 		exp_replay = util.initialize_rank_replay(env, rp_start, rp_size, frames_per_state, 
@@ -250,8 +251,8 @@ def ddqn_rankWeight_train(env, exploreScheduler, betaScheduler, optimizer_constr
 			target.load_state_dict(model.state_dict())
 
 		# sort memory replay every half of it's capacity iterations 
-		# if frames_count % int(rp_size/2) == 0:
-		# 	exp_replay.sort()
+		if frames_count % int(rp_size/2) == 0:
+			exp_replay.sort()
 
 
 		#Save weights every 250k frames

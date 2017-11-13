@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from collections import namedtuple
 from itertools import count
 import time
+import copy
 
 import torch
 import torch.nn as nn
@@ -42,8 +43,8 @@ class RankBasedPrioritizedReplay(object):
 	def __init__(self, N):
 		self.capacity = N
 		self.memory = {}
+		self.sorted_memory = {}
 		self.position = 1
-		self.priorityWeights = {}
 		self.prioritySum = 0
 		self.minPriority = None
 
@@ -55,62 +56,59 @@ class RankBasedPrioritizedReplay(object):
 		"""
 		if(len(self.memory) < self.capacity):
 			self.memory[self.position] = Experience(state, action, reward, next_state, td_error)
-			self.priorityWeights[self.position] = td_error.data[0]
-			self.prioritySum += td_error.data[0]
+			# self.priorityWeights[self.position] = td_error.data[0]
+			# self.prioritySum += td_error.data[0]
 			self.position = (self.position + 1) % (self.capacity)
 			if self.position == 0:
 				self.position = 1
 
-			if self.minPriority is None:
-				self.minPriority = td_error.data[0]
-			elif self.minPriority > td_error.data[0]:
-				self.minPriority = td_error.data[0]
+			# if self.minPriority is None:
+			# 	self.minPriority = td_error.data[0]
+			# elif self.minPriority > td_error.data[0]:
+			# 	self.minPriority = td_error.data[0]
 			
 		else:
 			self.memory[self.position] = Experience(state, action, reward, next_state, td_error)
-			self.priorityWeights[self.position] = td_error.data[0]
-			self.prioritySum += td_error.data[0]
+			# self.priorityWeights[self.position] = td_error.data[0]
+			# self.prioritySum += td_error.data[0]
 			self.position = (self.position + 1) % (self.capacity)
 			if self.position == 0:
 				self.position = 1
-			if self.minPriority > td_error.data[0]:
-				self.minPriority = td_error.data[0]
+			# if self.minPriority > td_error.data[0]:
+			# 	self.minPriority = td_error.data[0]
 
 	def sort(self):
-		i = len(self.memory) // 2
+		self.sorted_memory = {}
+		self.sorted_memory = copy.deepcopy(self.memory)
+		i = len(self.sorted_memory) // 2
 		while(i > 0):
 			self.percDown(i)
 			i -= 1
 
+		self.updatePrioritySumAndMinPriority(self.sorted_memory)
+
 	def percDown(self, i):
-		while(i * 2) <= len(self.memory):
+		while(i * 2) <= len(self.sorted_memory):
 			temp_maxChild = self.maxChild(i)
 
-			if (self.memory[i].td_error < self.memory[temp_maxChild].td_error).data.all():
-				tmp = self.memory[i]
-				self.memory[i] = self.memory[temp_maxChild]
-				self.priorityWeights[i] = self.memory[temp_maxChild].td_error.data[0]
-				self.memory[temp_maxChild] = tmp
-				self.priorityWeights[temp_maxChild] = tmp.td_error.data[0]
+			if (self.sorted_memory[i].td_error < self.sorted_memory[temp_maxChild].td_error).data.all():
+				tmp = self.sorted_memory[i]
+				self.sorted_memory[i] = self.sorted_memory[temp_maxChild]
+				self.sorted_memory[temp_maxChild] = tmp
 
 			i = temp_maxChild
 
 	def maxChild(self, i):
-		if ((i*2) + 1) > (len(self.memory)-1):
+		if ((i*2) + 1) > (len(self.sorted_memory)-1):
 			return i * 2
 
 		else:
 
-			if (self.memory[i*2].td_error > self.memory[(i*2)+1].td_error).data.all():
+			if (self.sorted_memory[i*2].td_error > self.sorted_memory[(i*2)+1].td_error).data.all():
 				return i * 2
 
 			else:
 				return (i * 2) + 1
-
-
-	def normalize_weights(self):
-		total = self.prioritySum
-		return [x/total for x in self.priorityWeights.values()]
 
 	def sample(self, batch_size):
 		"""
@@ -119,19 +117,18 @@ class RankBasedPrioritizedReplay(object):
 		samples_list = []
 		rank_list = []
 		priority_list = []
-		segment_size = (len(self.memory)+1)//batch_size
-		index = list(range(1,len(self.memory),segment_size))
-		total = sum(self.priorityWeights.values())
+		segment_size = (len(self.sorted_memory)+1)//batch_size
+		index = list(range(1,len(self.sorted_memory),segment_size))
 
 		for i in index:
-			if i + segment_size < len(self.memory):
+			if i + segment_size < len(self.sorted_memory):
 				choice = random.randint(i, i+segment_size)
 			else:
-				choice = random.randint(i, len(self.memory)-1)
-			samples_list.append(self.memory[choice])
+				choice = random.randint(i, len(self.sorted_memory)-1)
+			samples_list.append(self.sorted_memory[choice])
 			rank_list.append(choice)
 
-			priorW = self.priorityWeights[choice]/total
+			priorW = self.sorted_memory[choice].td_error/self.prioritySum
 
 			if priorW < 1e-8:
 				priorW = 1e-8
@@ -140,15 +137,30 @@ class RankBasedPrioritizedReplay(object):
 
 		return samples_list, rank_list, priority_list
 
+	def updatePrioritySumAndMinPriority(self, sorted_memory):
+
+		self.prioritySum = 0
+		self.minPriority = None
+
+		for key, value in self.sorted_memory.items():
+			self.prioritySum += value.td_error
+
+			if self.minPriority == None:
+				self.minPriority = value.td_error
+
+			elif value.td_error < self.minPriority:
+				self.minPriority = value.td_error
+
+
 	def update(self, index, loss):
 		"""
 		update the samples new td values
 		"""
 		for i in range(len(index)):
 			indexVal = index[i]
-			curr_sample = self.memory[indexVal]
+			curr_sample = self.sorted_memory[indexVal]
 			self.prioritySum -= curr_sample.td_error.data[0]
-			self.memory[indexVal] = Experience(curr_sample.state, curr_sample.action, curr_sample.reward, curr_sample.next_state, loss[i])
+			self.sorted_memory[indexVal] = Experience(curr_sample.state, curr_sample.action, curr_sample.reward, curr_sample.next_state, loss[i])
 			self.priorityWeights[indexVal] = loss[i].data[0]
 			self.prioritySum += loss[i].data[0]
 
@@ -158,32 +170,16 @@ class RankBasedPrioritizedReplay(object):
 			if self.minPriority == curr_sample.td_error.data[0]:
 					self.minPriority = min(self.priorityWeights.values())
 
-
-	def get_max_weight(self, beta):
-		total = self.prioritySum
-		minVal = (self.minPriority/total)+1e-8
-
-		if 1/minVal < 1e-8:
-			minValFactor = 1e-8
-
-		else:
-			minValFactor = 1/minVal
-
-		return ((1/(len(self.memory))) * minValFactor) ** beta
-
 	def __len__(self):
 		return len(self.memory)
 
 	def get_minPriority(self):
-		return min(self.priorityWeights)
+		return self.minPriority
 
 	def pop(self):
 		return self.memory[1]
 
 	def get_experience(self, index):
 		return self.memory[index]
-
-	def get_maxPriority(self):
-		return max(self.priorityWeights)
 
 
