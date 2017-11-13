@@ -221,8 +221,8 @@ def ddqn_rankWeight_train(env, exploreScheduler, betaScheduler, optimizer_constr
 			optimizer.zero_grad()
 			loss.backward()
 
-			# for param in model.parameters():
-			# 	param.grad.data.clamp_(-1,1)
+			for param in model.parameters():
+				param.grad.data.clamp_(-1,1)
 
 			optimizer.step()
 			loss_per_epoch.append(loss.data.cpu().numpy()[0])
@@ -250,8 +250,8 @@ def ddqn_rankWeight_train(env, exploreScheduler, betaScheduler, optimizer_constr
 			target.load_state_dict(model.state_dict())
 
 		# sort memory replay every half of it's capacity iterations 
-		if frames_count % int(rp_size/2) == 0:
-			exp_replay.sort()
+		# if frames_count % int(rp_size/2) == 0:
+		# 	exp_replay.sort()
 
 
 		#Save weights every 250k frames
