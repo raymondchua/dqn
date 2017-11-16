@@ -98,7 +98,10 @@ def ddqn_compute_y(batch, batch_size, model, target, gamma):
 	
 	# Compute Huber loss
 	loss = F.smooth_l1_loss(state_action_values, y_output)
-	td_error =  torch.abs(y_output - state_action_values).squeeze()
+	td_error =  (y_output - state_action_values).squeeze()
+	td_error = torch.clamp(td_error, -1, 1)
+	td_error = torch.abs(td_error)
+
 
 	return loss, td_error
 
