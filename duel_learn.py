@@ -196,7 +196,7 @@ def duel_train(env, exploreScheduler, optimizer_constructor, model_type, batch_s
 			
 			batch = Experience(*zip(*obs_samples))
 
-			loss, new_weights = duel_compute_y(batch, num_samples_per_batch, model, target, gamma)
+			loss = duel_compute_y(batch, num_samples_per_batch, model, target, gamma)
 
 			optimizer.zero_grad()
 			loss.backward()
