@@ -98,8 +98,9 @@ def ddqn_compute_y(batch, batch_size, model, target, gamma):
 	
 	# Compute Huber loss
 	loss = F.smooth_l1_loss(state_action_values, y_output)
+	td_error =  torch.abs(y_output - state_action_values).squeeze()
 
-	return loss
+	return loss, td_error
 
 	
 
@@ -199,7 +200,8 @@ def ddqn_rank_train(env, exploreScheduler, optimizer_constructor, model_type, ba
 			
 			batch = Experience(*zip(*obs_samples))
 
-			loss = ddqn_compute_y(batch, num_samples_per_batch, model, target, gamma)
+			loss, td_error = ddqn_compute_y(batch, num_samples_per_batch, model, target, gamma)
+			exp_replay.update(obs_ranks, td_error)
 
 			optimizer.zero_grad()
 			loss.backward()
