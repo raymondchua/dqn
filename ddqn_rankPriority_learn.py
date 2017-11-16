@@ -83,8 +83,6 @@ def ddqn_compute_y(batch, batch_size, model, target, gamma):
 	reward_batch = Variable(torch.cat(batch.reward)) 
 	action_batch = Variable(torch.cat(batch.action))
 
-	weights_var = Variable(weights)
-
 	#compute Q(s,a) based on the action taken
 	state_action_values = model(state_batch).gather(1,action_batch)
 
