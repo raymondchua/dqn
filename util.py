@@ -220,7 +220,7 @@ def initialize_rank_replay(env, rp_start, rp_size, frames_per_state,
 		action_ex = Variable(action, volatile=True)
 		reward_ex = Variable(reward, volatile=True)
 
-		#compute td-error for one sample
+		# compute td-error for one sample
 		td_error = ddqn_compute_td_error(batch_size=1, state_batch=current_state_ex, reward_batch=reward_ex, action_batch=action_ex, 
 			next_state_batch=curr_obs_ex, model=model, target=target, gamma=gamma)
 		td_error = torch.pow(torch.abs(td_error) + 1e-8, prob_alpha)

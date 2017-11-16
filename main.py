@@ -29,6 +29,8 @@ from ddqn_rankPriority_learn import ddqn_rank_train
 from ddqn_rankPriorityWeighted_learn import ddqn_rankWeight_train
 
 from duel_rankPriority_learn import duel_rank_train
+from duel_learn import duel_train
+
 
 from scheduler import Scheduler
 
@@ -250,6 +252,26 @@ def main():
 			last_checkpoint = args.last_checkpoint,
 			max_frames=args.max_frames,
 			envo=args.environment)
+
+		else:
+			duel_train(env, exploreScheduler, optimizer_constructor=optimizer, 
+			model_type = args.model_type, 
+			batch_size = args.batch_size, 
+			rp_start = args.rp_initial, 
+			rp_size = args.rp_capacity, 
+			exp_frame = args.explore_frame, 
+			exp_initial = args.initial_explore, 
+			exp_final = args.final_explore,
+			prob_alpha = args.prob_alpha,
+			gamma = args.discount_factor,
+			target_update_steps = args.target_update_steps,
+			frames_per_epoch = args.frames_per_epoch,
+			frames_per_state = args.frames_per_state,
+			output_directory = args.output_directory,
+			last_checkpoint = args.last_checkpoint,
+			max_frames=args.max_frames,
+			envo=args.environment)
+
 
 	#TODO: create duel rank eval
 
