@@ -199,9 +199,7 @@ def ddqn_rank_train(env, exploreScheduler, optimizer_constructor, model_type, ba
 			
 			batch = Experience(*zip(*obs_samples))
 
-			loss, new_weights = ddqn_compute_y(batch, num_samples_per_batch, model, target, gamma)
-			loss_abs = torch.abs(new_weights)
-			exp_replay.update(obs_ranks, loss_abs)
+			loss = ddqn_compute_y(batch, num_samples_per_batch, model, target, gamma)
 
 			optimizer.zero_grad()
 			loss.backward()
