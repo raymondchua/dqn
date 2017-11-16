@@ -7,8 +7,6 @@ from gym import wrappers
 import math
 import random
 import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
 from collections import namedtuple
 from itertools import count
 from copy import deepcopy
@@ -20,12 +18,12 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.autograd import Variable
-import torchvision.transforms as T
 
 
 from rank_based_prioritized_replay import RankBasedPrioritizedReplay, Experience
 from dqn_model import DQN
 import util
+from WeightedLoss import Weighted_Loss
 
 
 import time
@@ -40,9 +38,6 @@ LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
 ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
 Tensor = FloatTensor
 
-#Hyperparameters for validation
-NUM_GAMES = 30
-MAX_FRAMES_PER_GAME = 520000
 
 def ddqn_compute_td_error(batch_size=32, state_batch=None, reward_batch=None, action_batch=None, next_state_batch=None,
 	model=None, target=None, gamma=0.99):
@@ -68,6 +63,7 @@ def ddqn_compute_td_error(batch_size=32, state_batch=None, reward_batch=None, ac
 	y_output = y_output.squeeze()
 
 	loss =  (y_output - state_action_values).squeeze()
+	loss = torch.clamp(loss, -1, 1)
 
 	return loss
 	
@@ -87,6 +83,8 @@ def ddqn_compute_y(batch, batch_size, model, target, gamma):
 	reward_batch = Variable(torch.cat(batch.reward)) 
 	action_batch = Variable(torch.cat(batch.action))
 
+	weights_var = Variable(weights)
+
 	#compute Q(s,a) based on the action taken
 	state_action_values = model(state_batch).gather(1,action_batch)
 
@@ -98,13 +96,6 @@ def ddqn_compute_y(batch, batch_size, model, target, gamma):
 	next_state_action_values.volatile = False
 
 	y_output =  (next_state_action_values*gamma) + reward_batch.squeeze()
-
-	# loss = state_action_values.squeeze() -  y_output
-
-	# avgloss = torch.sum(loss).div(batch_size)
-
-	# return avgloss, loss
-
 	y_output = y_output.view(batch_size,1)
 	
 	# Compute Huber loss
@@ -114,9 +105,9 @@ def ddqn_compute_y(batch, batch_size, model, target, gamma):
 
 	
 
-def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor, model_type, batch_size, rp_start, rp_size, 
+def ddqn_rank_train(env, exploreScheduler, optimizer_constructor, model_type, batch_size, rp_start, rp_size, 
 	exp_frame, exp_initial, exp_final, prob_alpha, gamma, target_update_steps, frames_per_epoch, 
-	frames_per_state, output_directory, last_checkpoint, max_frames):
+	frames_per_state, output_directory, last_checkpoint, max_frames, envo):
 
 	"""
 	Implementation of the training algorithm for DDQN using Rank-based prioritization.
@@ -126,7 +117,7 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 	"""
 	
 	gym.undo_logger_setup()
-	logging.basicConfig(filename='ddqn_rank_training.log',level=logging.INFO)
+	logging.basicConfig(filename=envo+'_'+'ddqn_rank_uniform_training.log',level=logging.INFO)
 	num_actions = env.action_space.n
 	env.reset()
 	
@@ -134,8 +125,8 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 	print(env.unwrapped.get_action_meanings())
 
 	# initialize action value and target network with the same weights
-	model = DQN(num_actions, use_bn=False)
-	target = DQN(num_actions, use_bn=False)
+	model = DQN(num_actions)
+	target = DQN(num_actions)
 
 	if use_cuda:
 		model.cuda()
@@ -148,9 +139,10 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 		print(last_checkpoint)
 		print('weights loaded...')
 
-		exp_replay = util.initialize_rank_replay_resume(env, rp_start, rp_size, frames_per_state, 
-			model, target, gamma, batch_size)
-		frames_count = get_index_from_checkpoint_path(last_checkpoint)
+		#TODO: Implementation of resume
+		# exp_replay = util.initialize_rank_replay_resume(env, rp_start, rp_size, frames_per_state, 
+		# 	model, target, gamma, batch_size)
+		# frames_count = get_index_from_checkpoint_path(last_checkpoint)
 
 	else:
 		exp_replay = util.initialize_rank_replay(env, rp_start, rp_size, frames_per_state, 
@@ -175,7 +167,6 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 	for frames_count in range(1, max_frames):
 
 		epsilon=exploreScheduler.anneal_linear(frames_count)
-		beta = betaScheduler.anneal_linear(frames_count)
 		choice = random.uniform(0,1)
 
 		# epsilon greedy algorithm
@@ -198,7 +189,7 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 		td_error = ddqn_compute_td_error(batch_size=1, state_batch=current_state_ex, reward_batch=reward_ex, action_batch=action_ex, 
 			next_state_batch=curr_obs_ex, model=model, target=target, gamma=gamma)
 
-		td_error = torch.pow(torch.abs(td_error)+1e-6, prob_alpha)
+		td_error = torch.pow(torch.abs(td_error)+1e-8, prob_alpha)
 		exp_replay.push(current_state, action, reward, curr_obs, td_error)
 		current_state = curr_obs
 
@@ -207,26 +198,21 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 			# Get batch samples
 			obs_samples, obs_ranks, obs_priorityVals = exp_replay.sample(batch_size)
 			num_samples_per_batch = len(obs_samples)
-			obs_priorityTensor = torch.from_numpy(np.array(obs_priorityVals))
-			p_batch = 1/ obs_priorityTensor
-			w_batch = (1/len(exp_replay) * p_batch)**beta
-			max_weight = exp_replay.get_max_weight(beta)
-			w_batch /= max_weight
-			w_batch = w_batch.type(Tensor)
-
+			
 			batch = Experience(*zip(*obs_samples))
 
-			loss = ddqn_compute_y(batch, num_samples_per_batch, model, target, gamma)
-			loss_abs = torch.abs(loss)
-			
+			loss, new_weights = ddqn_compute_y(batch, num_samples_per_batch, model, target, gamma)
+			loss_abs = torch.abs(new_weights)
+			exp_replay.update(obs_ranks, loss_abs)
+
 			optimizer.zero_grad()
 			loss.backward()
 
-			# for param in model.parameters():
-			# 	param.grad.data.clamp_(-1,1)
+			for param in model.parameters():
+				param.grad.data.clamp_(-1,1)
 
 			optimizer.step()
-			loss_per_epoch.append(loss.data.cpu().numpy())
+			loss_per_epoch.append(loss.data.cpu().numpy()[0])
 		
 		frames_per_episode+= frames_per_state
 
@@ -249,13 +235,16 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 		# update weights of target network for every TARGET_UPDATE_FREQ steps
 		if frames_count % target_update_steps == 0:
 			target.load_state_dict(model.state_dict())
-			# print('weights updated at frame no. ', frames_count)
+
+		# sort memory replay every half of it's capacity iterations 
+		if frames_count % int(rp_size/2) == 0:
+			exp_replay.sort()
 
 
 		#Save weights every 250k frames
 		if frames_count % 250000 == 0:
-			util.make_sure_path_exists(output_directory+model_type+'/')
-			torch.save(model.state_dict(), 'rank_weights_'+ str(frames_count)+'.pth')
+			util.make_sure_path_exists(output_directory+'/'+envo+'/')
+			torch.save(model.state_dict(), output_directory+'/'+envo+'/rank_uniform'+ str(frames_count)+'.pth')
 
 
 		#Print frame count and sort experience replay for every 1000000 (one million) frames:
@@ -263,7 +252,7 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 			training_update = 'frame count: ', frames_count, 'episode count: ', episodes_count, 'epsilon: ', epsilon
 			print(training_update)
 			logging.info(training_update)
-			exp_replay.sort()
+			
 
 
 
