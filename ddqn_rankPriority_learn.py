@@ -62,13 +62,13 @@ def ddqn_compute_td_error(batch_size=32, state_batch=None, reward_batch=None, ac
 	state_action_values = state_action_values.squeeze()
 	y_output = y_output.squeeze()
 
-	loss =  (y_output - state_action_values).squeeze()
-	loss = torch.clamp(loss, -1, 1)
+	loss = (torch.abs(state_action_values - y_output)<1).float()*(state_action_values - y_output)**2 +\
+			(torch.abs(state_action_values - y_output)>=1).float()*(torch.abs(state_action_values - y_output) - 0.5)
 
 	return loss
 	
 
-def ddqn_compute_y(batch, batch_size, model, target, gamma):
+def ddqn_compute_y(batch, batch_size, model, target, gamma, weights, lossFunc):
 	"""
 	Compute the Double Q learning error as based on the paper, 
 	"Deep Reinforcement Learning with Double Q-learning" by Hado van Hasselt and
@@ -97,17 +97,21 @@ def ddqn_compute_y(batch, batch_size, model, target, gamma):
 	y_output = y_output.view(batch_size,1)
 	
 	# Compute Huber loss
-	loss = F.smooth_l1_loss(state_action_values, y_output)
-	td_error =  (y_output - state_action_values).squeeze()
-	td_error = torch.clamp(td_error, -1, 1)
-	td_error = torch.abs(td_error)
+	# loss = F.smooth_l1_loss(state_action_values, y_output)
 
+	weights_var = Variable(weights)
+	loss = lossFunc(state_action_values, y_output, weights_var)
+	td_error =  (torch.abs(state_action_values - y_output)<1).float()*(state_action_values - y_output)**2 +\
+			(torch.abs(state_action_values - y_output)>=1).float()*(torch.abs(state_action_values - y_output) - 0.5)
+
+	td_error = torch.abs(td_error)
+	td_error = td_error + 1e-8
 
 	return loss, td_error
 
 	
 
-def ddqn_rank_train(env, exploreScheduler, optimizer_constructor, model_type, batch_size, rp_start, rp_size, 
+def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor, model_type, batch_size, rp_start, rp_size, 
 	exp_frame, exp_initial, exp_final, prob_alpha, gamma, target_update_steps, frames_per_epoch, 
 	frames_per_state, output_directory, last_checkpoint, max_frames, envo):
 
@@ -161,14 +165,15 @@ def ddqn_rank_train(env, exploreScheduler, optimizer_constructor, model_type, ba
 	rewards_per_episode = 0
 	rewards_duration = []
 	loss_per_epoch = []
-
-	
 	current_state, _, _, _ = util.play_game(env, frames_per_state)
+	wLoss_func = Weighted_Loss()
+
 	print('Starting training...')
 
 	for frames_count in range(1, max_frames):
 
 		epsilon=exploreScheduler.anneal_linear(frames_count)
+		beta = betaScheduler.anneal_linear(frames_count)
 		choice = random.uniform(0,1)
 
 		# epsilon greedy algorithm
@@ -191,23 +196,37 @@ def ddqn_rank_train(env, exploreScheduler, optimizer_constructor, model_type, ba
 		td_error = ddqn_compute_td_error(batch_size=1, state_batch=current_state_ex, reward_batch=reward_ex, action_batch=action_ex, 
 			next_state_batch=curr_obs_ex, model=model, target=target, gamma=gamma)
 
-		td_error = torch.pow(torch.abs(td_error)+1e-8, prob_alpha)
+		td_error = torch.pow(1/(torch.abs(td_error)+1e-8), prob_alpha)
 		exp_replay.push(current_state, action, reward, curr_obs, td_error)
 		current_state = curr_obs
 
 		# compute y 
 		if len(exp_replay) >= batch_size:
 			# Get batch samples
-			obs_samples, obs_ranks, obs_priorityVals = exp_replay.sample(batch_size)
+			obs_samples, obs_ranks, obs_priorityVals = exp_replay.sample(batch_size, frames_count)
 			num_samples_per_batch = len(obs_samples)
-			
+			obs_priorityTensor = torch.from_numpy(np.array(obs_priorityVals))
+			p_batch = 1/ obs_priorityTensor
+			w_batch = (1/exp_replay.getReplayCapacity() * p_batch)**beta
+			max_weight = torch.max(w_batch)
+			w_batch /= max_weight
+			w_batch = w_batch.type(Tensor)
+
 			batch = Experience(*zip(*obs_samples))
-
-			loss, td_error = ddqn_compute_y(batch, num_samples_per_batch, model, target, gamma)
-			exp_replay.update(obs_ranks, td_error)
-
+			loss, new_weights = ddqn_compute_y(batch, num_samples_per_batch, model, target, gamma, w_batch, wLoss_func)
+			new_weights = torch.pow(1/(torch.abs(new_weights)+1e-8), prob_alpha)
+			exp_replay.update(obs_ranks, new_weights)
 			optimizer.zero_grad()
 			loss.backward()
+
+			
+			# batch = Experience(*zip(*obs_samples))
+
+			# loss, td_error = ddqn_compute_y(batch, num_samples_per_batch, model, target, gamma)
+			# exp_replay.update(obs_ranks, td_error)
+
+			# optimizer.zero_grad()
+			# loss.backward()
 
 			for param in model.parameters():
 				param.grad.data.clamp_(-1,1)
@@ -236,10 +255,6 @@ def ddqn_rank_train(env, exploreScheduler, optimizer_constructor, model_type, ba
 		# update weights of target network for every TARGET_UPDATE_FREQ steps
 		if frames_count % target_update_steps == 0:
 			target.load_state_dict(model.state_dict())
-
-		# sort memory replay every half of it's capacity iterations 
-		if frames_count % int(rp_size/2) == 0:
-			exp_replay.sort()
 
 
 		#Save weights every 250k frames

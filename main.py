@@ -60,7 +60,6 @@ parser.add_argument('--explore_frame',			type=int, 	help='Num of frames over whi
 parser.add_argument('--learning_rate', 			type=float, help='Learning rate', default=0.00025)
 parser.add_argument('--output_directory',		type=str,	help='Output directory to save weights, if empty, outputs to a local folder named \'saved_weights\'', default='./saved_weights/')
 parser.add_argument('--last_checkpoint',		type=str,	help='Last saved weights that you wish to use to either resume training or for eval.', default='')
-parser.add_argument('--rank_priority_weights',				help='Use rank prioritized replay memory with weights if true', action="store_true", default=False) #TODO: Delete afte cleanup
 parser.add_argument('--replay_type',			type=str,	help='Replay Memory Type.', default='uniform', choices=['uniform', 'rank', 'proportional'])
 
 
@@ -170,7 +169,7 @@ def main():
 
 	
 		if args.replay_type == 'rank': 
-			ddqn_rank_train(env, exploreScheduler, optimizer_constructor=optimizer, 
+			ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor=optimizer, 
 			model_type = args.model_type, 
 			batch_size = args.batch_size, 
 			rp_start = args.rp_initial, 
@@ -236,7 +235,7 @@ def main():
 			if not os.path.isfile(args.last_checkpoint):
 				raise FileNotFoundError('Checkpoint file cannot be found!')
 
-		if args.rank_priority_weights: 
+		if args.replay_type == 'rank': 
 			duel_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor=optimizer, 
 			model_type = args.model_type, 
 			batch_size = args.batch_size, 
