@@ -130,12 +130,12 @@ class RankBasedPrioritizedReplay(object):
 		#get new replay when size of memory is less than capacity or for every 1000 frames
 		if len(self.memory) < self.capacity:
 			self.build_new_replay()
-			sorted(self.priorityQueue, key=self.getKey)
+			# sorted(self.priorityQueue, key=self.getKey)
 			self.build_new_pweights()
 
 		elif iteration %100 == 0:
 			self.build_new_replay()
-			sorted(self.priorityQueue, key=self.getKey)
+			# sorted(self.priorityQueue, key=self.getKey)
 			self.build_new_pweights()
 
 
