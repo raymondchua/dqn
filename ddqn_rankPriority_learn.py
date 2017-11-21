@@ -202,8 +202,13 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 
 		# compute y 
 		if len(exp_replay) >= batch_size:
-			# Get batch samples
+			# Get batch samples\
+
+			# start = time.time()
+
 			obs_samples, obs_ranks, obs_priorityVals = exp_replay.sample(batch_size, frames_count)
+
+
 			num_samples_per_batch = len(obs_samples)
 			obs_priorityTensor = torch.from_numpy(np.array(obs_priorityVals))
 			p_batch = 1/ obs_priorityTensor
@@ -218,7 +223,6 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 			exp_replay.update(obs_ranks, new_weights)
 			optimizer.zero_grad()
 			loss.backward()
-
 			
 			# batch = Experience(*zip(*obs_samples))
 
@@ -236,6 +240,12 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 		
 		frames_per_episode+= frames_per_state
 
+		# end = time.time()
+
+		# duration = end-start
+
+		# print('duration : ', duration)
+
 		if done:
 			rewards_duration.append(rewards_per_episode)
 			rewards_per_episode = 0
@@ -243,6 +253,7 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 			episodes_count+=1
 			env.reset()
 			current_state, _, _, _ = util.play_game(env, frames_per_state)
+		
 
 			if episodes_count % 100 == 0:
 				avg_episode_reward = sum(rewards_duration)/100.0

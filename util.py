@@ -234,7 +234,6 @@ def initialize_rank_replay(env, rp_start, rp_size, frames_per_state,
 			current_state, _, _, _ = play_game(env, frames_per_state)
 
 
-	exp_replay.sort()
 	print('Rank Prioritized Replay initialized for training...')
 	return exp_replay
 
