@@ -122,19 +122,8 @@ class RankBasedPrioritizedReplay(object):
 		#get new replay when size of memory is less than capacity or for every 1000 frames
 		if (len(self.priorityQueue) ==  1) or (iteration%1000 == 0) or (len(self.memory) < (self.capacity-1)):
 			self.build_new_replay()
-<<<<<<< HEAD
-			# self.sort()
 			sorted(self.priorityQueue[0:len(self.priorityQueue)], key=self.getKey)
-=======
-			# sorted(self.priorityQueue, key=self.getKey)
 			self.build_new_pweights()
-
-		elif iteration %100 == 0:
-			self.build_new_replay()
-			# sorted(self.priorityQueue, key=self.getKey)
->>>>>>> 88b4ebb3be3935ec538e38587b107ad93e372f22
-			self.build_new_pweights()
-
 
 		segment_size = len(self.priorityQueue)//batch_size
 		index = list(range(0,len(self.priorityQueue)-1,segment_size))
@@ -148,13 +137,6 @@ class RankBasedPrioritizedReplay(object):
 			else:
 				choice = random.randint(i, len(self.priorityQueue)-1)
 				segment_total = np.sum(self.priorityWeights[i:len(self.priorityWeights)])
-
-				if segment_total == 0:
-					print(i)
-					print(len(self.priorityWeights))
-					print(index)
-					print(len(index))
-					print(self.priorityWeights[i:len(self.priorityWeights)])
 
 			samples_list.append(self.priorityQueue[choice])
 			rank_list.append(choice)
