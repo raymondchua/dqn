@@ -10,4 +10,5 @@ class Weighted_Loss(nn.Module):
 			(torch.abs(current - target)>=1).float()*(torch.abs(current - target) - 0.5)
 		weighted_batch_loss = torch.dot(weights, batch_loss.squeeze())
 		weighted_loss = weighted_batch_loss.sum()
+		weighted_loss = torch.div(weighted_loss, current.size()[0])
 		return weighted_loss

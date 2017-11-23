@@ -87,7 +87,6 @@ class RankBasedPrioritizedReplay(object):
 
 	def build_new_replay(self): 
 		self.priorityQueue = []
-		# self.priorityQueue.append(None)
 		self.prioritySum = 0
 
 		for i in range(1, len(self.memory)):
@@ -119,10 +118,14 @@ class RankBasedPrioritizedReplay(object):
 		priority_list = []
 
 
-		#get new replay when size of memory is less than capacity or for every 1000 frames
-		if (len(self.priorityQueue) ==  1) or (iteration%1000 == 0) or (len(self.memory) < (self.capacity-1)):
+		#get new replay when size of priorityQueue is zero or for every 10000 frames
+		if (len(self.priorityQueue) ==  0) or (iteration%10000 == 0):
 			self.build_new_replay()
 			sorted(self.priorityQueue[0:len(self.priorityQueue)], key=self.getKey)
+			self.build_new_pweights()
+
+		else:
+			self.priorityQueue = list(self.memory.values())[1:]
 			self.build_new_pweights()
 
 		segment_size = len(self.priorityQueue)//batch_size
@@ -154,7 +157,7 @@ class RankBasedPrioritizedReplay(object):
 		"""
 		update the samples new td values
 		"""
-		for i in range(len(index)):
+		for i in range(len(index)-1):
 			indexVal = index[i]
 			curr_sample = self.priorityQueue[indexVal]
 			self.prioritySum -= curr_sample.td_error.data[0]
