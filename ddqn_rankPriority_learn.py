@@ -248,7 +248,7 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 		# print('duration : ', duration)
 
 		if done:
-			print('Game: ', rewards_per_episode)
+			# print('Game: ', rewards_per_episode)
 			rewards_duration.append(rewards_per_episode)
 			rewards_per_episode = 0
 			episodes_count+=1
