@@ -25,7 +25,7 @@ class RankBasedPrioritizedReplay(object):
 	def __init__(self, N):
 		self.capacity = N
 		self.memory = {}
-		self.priorityWeights = []
+		self.priorityWeights = torch.zeros(self.capacity)
 		self.position = 1
 		self.prioritySum = 0
 		self.minPriority = None
@@ -100,13 +100,13 @@ class RankBasedPrioritizedReplay(object):
 				self.minPriority = self.memory[i].td_error.data[0]
 
 	def build_new_pweights(self):
-		self.priorityWeights = []
+		self.priorityWeights = torch.zeros(self.capacity)
 		# self.priorityWeights.append(None)
 
 		for i in range(1, len(self.priorityQueue)):
-			self.priorityWeights.append(self.priorityQueue[i].td_error.data[0])
+			self.priorityWeights[i] = self.priorityQueue[i].td_error.data[0]
 
-		self.priorityWeights = np.array(self.priorityWeights)
+		# self.priorityWeights = np.array(self.priorityWeights)
 
 
 	def sample(self, batch_size, iteration):
@@ -115,11 +115,11 @@ class RankBasedPrioritizedReplay(object):
 		"""
 		samples_list = []
 		rank_list = []
-		priority_list = []
 
 
 		#get new replay when size of priorityQueue is zero or for every 10000 frames
 		if (len(self.priorityQueue) ==  0) or (iteration%10000 == 0):
+			print('build new replay')
 			self.build_new_replay()
 			sorted(self.priorityQueue[0:len(self.priorityQueue)], key=self.getKey)
 			self.build_new_pweights()
@@ -128,18 +128,21 @@ class RankBasedPrioritizedReplay(object):
 			self.priorityQueue = list(self.memory.values())[1:]
 			self.build_new_pweights()
 
-		segment_size = len(self.priorityQueue)//batch_size
+		segment_size = math.floor(len(self.priorityQueue)/batch_size+1)
 		index = list(range(0,len(self.priorityQueue)-1,segment_size))
+
+		count = 0
+		priority_list = torch.zeros(len(index)+1)
 
 
 		for i in index:
 			if i + segment_size < len(self.priorityQueue):
 				choice = random.randint(i, i+segment_size)
-				segment_total = np.sum(self.priorityWeights[i:i+segment_size])
+				segment_total = torch.sum(self.priorityWeights[i:i+segment_size])
 
 			else:
 				choice = random.randint(i, len(self.priorityQueue)-1)
-				segment_total = np.sum(self.priorityWeights[i:len(self.priorityWeights)])
+				segment_total = torch.sum(self.priorityWeights[i:len(self.priorityWeights)])
 
 			samples_list.append(self.priorityQueue[choice])
 			rank_list.append(choice)
@@ -149,7 +152,8 @@ class RankBasedPrioritizedReplay(object):
 			if priorW < 1e-8:
 				priorW = 1e-8
 
-			priority_list.append(priorW)
+			priority_list[count] = priorW
+			count += 1
 
 		return samples_list, rank_list, priority_list
 
@@ -165,7 +169,7 @@ class RankBasedPrioritizedReplay(object):
 			self.prioritySum += loss[i].data[0]
 			self.priorityWeights[i] = loss[i].data[0]
 
-		self.minPriority = min(self.priorityWeights)
+		self.minPriority = torch.min(self.priorityWeights)
 
 	def __len__(self):
 		return len(self.memory)
