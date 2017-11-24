@@ -10,7 +10,7 @@ from torch.autograd import Variable
 
 from replay_memory import ExpReplay
 from rank_based_prioritized_replay import RankBasedPrioritizedReplay
-from ddqn_rankPriority_learn import ddqn_compute_y, ddqn_compute_td_error
+from ddqn_rankPriority_learn import ddqn_compute_y
 
 use_cuda = torch.cuda.is_available()
 FloatTensor = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
@@ -215,18 +215,20 @@ def initialize_rank_replay(env, rp_start, rp_size, frames_per_state,
 		curr_obs, reward, done, _ = play_game(env, frames_per_state, action[0][0])
 		reward = Tensor([[reward]])
 		
-		current_state_ex = Variable(current_state, volatile=True)
-		curr_obs_ex = Variable(curr_obs, volatile=True)
-		action_ex = Variable(action, volatile=True)
-		reward_ex = Variable(reward, volatile=True)
+		# current_state_ex = Variable(current_state, volatile=True)
+		# curr_obs_ex = Variable(curr_obs, volatile=True)
+		# action_ex = Variable(action, volatile=True)
+		# reward_ex = Variable(reward, volatile=True)
 
 		# compute td-error for one sample
-		td_error = ddqn_compute_td_error(batch_size=1, state_batch=current_state_ex, reward_batch=reward_ex, action_batch=action_ex, 
-			next_state_batch=curr_obs_ex, model=model, target=target, gamma=gamma)
-		td_error = torch.pow(1/(torch.abs(td_error)+1e-8), prob_alpha)
+		# td_error = ddqn_compute_td_error(batch_size=1, state_batch=current_state_ex, reward_batch=reward_ex, action_batch=action_ex, 
+		# 	next_state_batch=curr_obs_ex, model=model, target=target, gamma=gamma)
+		# td_error = Tensor([1])
+		# td_error = torch.pow(torch.pow(torch.abs(td_error),-1), prob_alpha)
+		td_error = np.power(np.power(np.abs([1]), -1), prob_alpha)
 		exp_replay.push(current_state, action, reward, curr_obs, td_error)
 
-		current_state_ex = curr_obs_ex
+		# current_state_ex = curr_obs_ex
 		episodes_count+= 1
 
 		if done:

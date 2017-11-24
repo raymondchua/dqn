@@ -28,7 +28,7 @@ class RankBasedPrioritizedReplay(object):
 		self.priorityWeights = torch.zeros(self.capacity)
 		self.position = 1
 		self.prioritySum = 0
-		self.minPriority = None
+		self.minPriority = 0
 		self.priorityQueue = []
 		# self.priorityQueue.append(None)
 
@@ -53,58 +53,59 @@ class RankBasedPrioritizedReplay(object):
 			if self.position == 0:
 				self.position = 1
 
-	def sort(self):
-		i = (len(self.priorityQueue)-1) // 2
-		while(i > 0):
-			self.percDown(i)
-			i -= 1
+	# def sort(self):
+	# 	i = (len(self.priorityQueue)-1) // 2
+	# 	while(i > 0):
+	# 		self.percDown(i)
+	# 		i -= 1
 
-	def percDown(self, i):
-		while(i * 2) <= len(self.priorityQueue):
-			temp_maxChild = self.maxChild(i)
+	# def percDown(self, i):
+	# 	while(i * 2) <= len(self.priorityQueue):
+	# 		temp_maxChild = self.maxChild(i)
 
-			if (self.priorityQueue[i].td_error < self.priorityQueue[temp_maxChild].td_error).data.all():
-				tmp = self.priorityQueue[i]
-				self.priorityQueue[i] = self.priorityQueue[temp_maxChild]
-				self.priorityQueue[temp_maxChild] = tmp
+	# 		if (self.priorityQueue[i].td_error < self.priorityQueue[temp_maxChild].td_error).data.all():
+	# 			tmp = self.priorityQueue[i]
+	# 			self.priorityQueue[i] = self.priorityQueue[temp_maxChild]
+	# 			self.priorityQueue[temp_maxChild] = tmp
 
-			i = temp_maxChild
+	# 		i = temp_maxChild
 
-	def maxChild(self, i):
-		if ((i*2) + 1) > (len(self.priorityQueue)-1):
-			return i * 2
+	# def maxChild(self, i):
+	# 	if ((i*2) + 1) > (len(self.priorityQueue)-1):
+	# 		return i * 2
 
-		else:
+	# 	else:
 
-			if (self.priorityQueue[i*2].td_error > self.priorityQueue[(i*2)+1].td_error).data.all():
-				return i * 2
+	# 		if (self.priorityQueue[i*2].td_error > self.priorityQueue[(i*2)+1].td_error).data.all():
+	# 			return i * 2
 
-			else:
-				return (i * 2) + 1
+	# 		else:
+	# 			return (i * 2) + 1
 
 	def getKey(self, item):
-		return item.td_error.data[0]
+		return item.td_error[0]
 
 	def build_new_replay(self): 
 		self.priorityQueue = []
 		self.prioritySum = 0
 
 		for i in range(1, len(self.memory)):
+
 			self.priorityQueue.append(self.memory[i])
-			self.prioritySum += self.memory[i].td_error.data[0]
+			self.prioritySum += self.memory[i].td_error[0]
 
-			if self.minPriority == None:
-				self.minPriority = self.memory[i].td_error.data[0]
+			if self.minPriority == 0:
+				self.minPriority = self.memory[i].td_error[0]
 
-			elif self.memory[i].td_error.data[0] < self.minPriority:
-				self.minPriority = self.memory[i].td_error.data[0]
+			elif self.memory[i].td_error < self.minPriority:
+				self.minPriority = self.memory[i].td_error[0]
 
 	def build_new_pweights(self):
 		self.priorityWeights = torch.zeros(self.capacity)
 		# self.priorityWeights.append(None)
 
 		for i in range(1, len(self.priorityQueue)):
-			self.priorityWeights[i] = self.priorityQueue[i].td_error.data[0]
+			self.priorityWeights[i] = float(self.priorityQueue[i].td_error[0])
 
 		# self.priorityWeights = np.array(self.priorityWeights)
 
@@ -146,7 +147,7 @@ class RankBasedPrioritizedReplay(object):
 			samples_list.append(self.priorityQueue[choice])
 			rank_list.append(choice)
 
-			priorW = self.priorityQueue[choice].td_error.data[0]/segment_total
+			priorW = self.priorityQueue[choice].td_error[0]/segment_total
 
 			if priorW < 1e-8:
 				priorW = 1e-8
@@ -162,11 +163,12 @@ class RankBasedPrioritizedReplay(object):
 		"""
 		for i in range(len(index)-1):
 			indexVal = index[i]
+			curr_loss = loss[i].data.cpu().numpy()[0]
 			curr_sample = self.priorityQueue[indexVal]
-			self.prioritySum -= curr_sample.td_error.data[0]
-			self.priorityQueue[indexVal] = Experience(curr_sample.state, curr_sample.action, curr_sample.reward, curr_sample.next_state, loss[i])
-			self.prioritySum += loss[i].data[0]
-			self.priorityWeights[i] = loss[i].data[0]
+			self.prioritySum -= curr_sample.td_error
+			self.priorityQueue[indexVal] = Experience(curr_sample.state, curr_sample.action, curr_sample.reward, curr_sample.next_state, curr_loss)
+			self.prioritySum += curr_loss
+			self.priorityWeights[i] = float(curr_loss)
 
 		self.minPriority = torch.min(self.priorityWeights)
 
