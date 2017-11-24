@@ -119,7 +119,6 @@ class RankBasedPrioritizedReplay(object):
 
 		#get new replay when size of priorityQueue is zero or for every 10000 frames
 		if (len(self.priorityQueue) ==  0) or (iteration%10000 == 0):
-			print('build new replay')
 			self.build_new_replay()
 			sorted(self.priorityQueue[0:len(self.priorityQueue)], key=self.getKey)
 			self.build_new_pweights()

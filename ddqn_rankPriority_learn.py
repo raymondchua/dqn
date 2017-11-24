@@ -202,7 +202,7 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 
 		# compute y 
 		if len(exp_replay) >= batch_size:
-			# Get batch samples\
+			# Get batch samples
 
 			start = time.time()
 
