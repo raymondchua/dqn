@@ -24,13 +24,9 @@ class RankBasedPrioritizedReplay(object):
 	"""
 	def __init__(self, N):
 		self.capacity = N
-		self.memory = {}
+		self.memory = []
 		self.priorityWeights = torch.zeros(self.capacity)
-		self.position = 1
-		self.prioritySum = 0
-		self.minPriority = 0
-		self.priorityQueue = []
-		# self.priorityQueue.append(None)
+		self.position = 0
 
 
 	def push(self, state, action, reward, next_state, td_error):
@@ -39,138 +35,82 @@ class RankBasedPrioritizedReplay(object):
 		At the same time, keep track of the total priority value in the replay memory.
 		"""
 		if(len(self.memory) < self.capacity):
+			self.memory.append(None)
 			self.memory[self.position] = Experience(state, action, reward, next_state, td_error)
-			# self.priorityWeights[self.position] = td_error.data[0]
-			# self.prioritySum += td_error.data[0]
 			self.position = (self.position + 1) % (self.capacity)
-			if self.position == 0:
-				self.position = 1
 			
 		else:
 		
 			self.memory[self.position] = Experience(state, action, reward, next_state, td_error)
 			self.position = (self.position + 1) % (self.capacity)
-			if self.position == 0:
-				self.position = 1
-
-	# def sort(self):
-	# 	i = (len(self.priorityQueue)-1) // 2
-	# 	while(i > 0):
-	# 		self.percDown(i)
-	# 		i -= 1
-
-	# def percDown(self, i):
-	# 	while(i * 2) <= len(self.priorityQueue):
-	# 		temp_maxChild = self.maxChild(i)
-
-	# 		if (self.priorityQueue[i].td_error < self.priorityQueue[temp_maxChild].td_error).data.all():
-	# 			tmp = self.priorityQueue[i]
-	# 			self.priorityQueue[i] = self.priorityQueue[temp_maxChild]
-	# 			self.priorityQueue[temp_maxChild] = tmp
-
-	# 		i = temp_maxChild
-
-	# def maxChild(self, i):
-	# 	if ((i*2) + 1) > (len(self.priorityQueue)-1):
-	# 		return i * 2
-
-	# 	else:
-
-	# 		if (self.priorityQueue[i*2].td_error > self.priorityQueue[(i*2)+1].td_error).data.all():
-	# 			return i * 2
-
-	# 		else:
-	# 			return (i * 2) + 1
-
+	
 	def getKey(self, item):
-		return item.td_error[0]
+		return item.td_error
 
-	def build_new_replay(self): 
-		self.priorityQueue = []
-		self.prioritySum = 0
-
-		for i in range(1, len(self.memory)):
-
-			self.priorityQueue.append(self.memory[i])
-			self.prioritySum += self.memory[i].td_error[0]
-
-			if self.minPriority == 0:
-				self.minPriority = self.memory[i].td_error[0]
-
-			elif self.memory[i].td_error < self.minPriority:
-				self.minPriority = self.memory[i].td_error[0]
-
-	def build_new_pweights(self):
-		self.priorityWeights = torch.zeros(self.capacity)
-		# self.priorityWeights.append(None)
-
-		for i in range(1, len(self.priorityQueue)):
-			self.priorityWeights[i] = float(self.priorityQueue[i].td_error[0])
-
-		# self.priorityWeights = np.array(self.priorityWeights)
-
-
-	def sample(self, batch_size, iteration):
+	def sample(self, batch_size, sort=False):
 		"""
-		Extract one random sample weighted by priority values from the replay memory.
+		Extract sample from the replay memory.
 		"""
 		samples_list = []
 		rank_list = []
+		priority_list = []
 
+		if sort:
+			sorted(self.memory, key=self.getKey, reverse=True)
 
-		#get new replay when size of priorityQueue is zero or for every 10000 frames
-		if (len(self.priorityQueue) ==  0) or (iteration%10000 == 0):
-			self.build_new_replay()
-			sorted(self.priorityQueue[0:len(self.priorityQueue)], key=self.getKey)
-			self.build_new_pweights()
+		if len(self.memory) < self.capacity:
+			index = np.linspace(0, len(self.memory)-1, batch_size, endpoint=True, dtype=int)
 
-		else:
-			self.priorityQueue = list(self.memory.values())[1:]
-			self.build_new_pweights()
+		for i in range(len(index)):
+			
+			start = index[i]
 
-		segment_size = math.floor(len(self.priorityQueue)/batch_size+1)
-		index = list(range(0,len(self.priorityQueue)-1,segment_size))
-
-		count = 0
-		priority_list = torch.zeros(len(index)+1)
-
-
-		for i in index:
-			if i + segment_size < len(self.priorityQueue):
-				choice = random.randint(i, i+segment_size)
-				segment_total = torch.sum(self.priorityWeights[i:i+segment_size])
-
+			if i < len(index)-1:
+				end = index[i+1]
 			else:
-				choice = random.randint(i, len(self.priorityQueue)-1)
-				segment_total = torch.sum(self.priorityWeights[i:len(self.priorityWeights)])
+				end = len(self.memory)
 
-			samples_list.append(self.priorityQueue[choice])
+
+
+			choice = random.randint(start, end-1)
+			
+
+			curr_sample = self.memory[choice]
+
+			#shift index by 1 since choice starts from 0
+			segment_pvals = sum(range(start+1, end+1))
+			prob_sample = choice+1/segment_pvals
+
+			samples_list.append(curr_sample)
+			priority_list.append(prob_sample)
 			rank_list.append(choice)
-
-			priorW = self.priorityQueue[choice].td_error[0]/segment_total
-
-			if priorW < 1e-8:
-				priorW = 1e-8
-
-			priority_list[count] = priorW
-			count += 1
 
 		return samples_list, rank_list, priority_list
 
-	def update(self, index, loss):
+	def update(self, index, loss, new_sample):
 		"""
 		update the samples new td values
 		"""
-		for i in range(len(index)-1):
-			indexVal = index[i]
-			curr_loss = loss[i].data.cpu().numpy()[0]
-			curr_sample = self.priorityQueue[indexVal]
-			self.prioritySum -= curr_sample.td_error
-			self.priorityQueue[indexVal] = Experience(curr_sample.state, curr_sample.action, curr_sample.reward, curr_sample.next_state, curr_loss)
-			self.prioritySum += curr_loss
-			self.priorityWeights[i] = float(curr_loss)
 
-		self.minPriority = torch.min(self.priorityWeights)
+		new_td = new_sample.td_error
+		insertNew = False
+
+		for i in range(len(index)):
+			indexVal = index[i]
+			curr_loss = loss[i]
+
+			if curr_loss < new_td and not insertNew:
+				insertNew = True
+				self.memory[indexVal] = new_sample
+
+			elif i == len(index)-1 and not insertNew:
+				insertNew = True
+				self.memory[indexVal] = new_sample
+
+			else:
+				curr_sample = self.memory[indexVal]
+				self.memory[indexVal] = Experience(curr_sample.state, curr_sample.action, curr_sample.reward, curr_sample.next_state, curr_loss)
+
 
 	def __len__(self):
 		return len(self.memory)

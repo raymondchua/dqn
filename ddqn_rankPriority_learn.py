@@ -37,37 +37,7 @@ IntTensor = torch.cuda.IntTensor if use_cuda else torch.IntTensor
 LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
 ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
 Tensor = FloatTensor
-
-
-# def ddqn_compute_td_error(batch_size=32, state_batch=None, reward_batch=None, action_batch=None, next_state_batch=None,
-# 	model=None, target=None, gamma=0.99):
-# 	"""
-# 	Compute the Double Q learning error as based on the paper, 
-# 	"Deep Reinforcement Learning with Double Q-learning" by Hado van Hasselt and
-# 	Arthur Guez and David Silver. 
-# 	Refer to equation 4 for the Double Q-learning error function.
-# 	"""
-# 	#compute Q(s,a) based on the action taken
-# 	state_action_values = model(state_batch).gather(1,action_batch)
-
-# 	model_actions = model(next_state_batch).data.max(1)[1].view(batch_size,1)
-# 	model_action_batch = Variable(torch.cat([model_actions]), volatile=True)
-
-# 	next_state_action_values = Variable(torch.zeros(batch_size)).type(Tensor)
-# 	next_state_action_values = target(next_state_batch).gather(1, model_action_batch)
-# 	next_state_action_values.volatile = True
-
-# 	y_output =  (gamma * next_state_action_values).add_(reward_batch) 
 	
-# 	state_action_values = state_action_values.squeeze()
-# 	y_output = y_output.squeeze()
-
-# 	loss = (torch.abs(state_action_values - y_output)<1).float()*(state_action_values - y_output)**2 +\
-# 			(torch.abs(state_action_values - y_output)>=1).float()*(torch.abs(state_action_values - y_output) - 0.5)
-
-# 	return loss
-	
-
 def ddqn_compute_y(batch, batch_size, model, target, gamma, weights, lossFunc):
 	"""
 	Compute the Double Q learning error as based on the paper, 
@@ -100,12 +70,18 @@ def ddqn_compute_y(batch, batch_size, model, target, gamma, weights, lossFunc):
 	# loss = F.smooth_l1_loss(state_action_values, y_output)
 
 	weights_var = Variable(weights)
-	loss, td_error = lossFunc(state_action_values, y_output, weights_var)
+	# loss, td_error = lossFunc(state_action_values, y_output, weights_var)
+	# loss = F.smooth_l1_loss(state_action_values, y_output, size_average=False)
+	loss = lossFunc(state_action_values, y_output, weights_var, reduce=False).squeeze()
 
-	td_error = torch.abs(td_error)
+	wloss = torch.dot(loss, weights_var)
+	avgLoss = wloss.mean()
+
+	loss.data.clamp_(-1,1)
+	td_error = torch.abs(loss.data)
 	td_error = td_error + 1e-8
-
-	return loss, td_error
+	
+	return avgLoss, td_error
 
 	
 
@@ -184,21 +160,9 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 
 		rewards_per_episode += reward
 		reward = Tensor([[reward]])
-		# current_state_ex = Variable(current_state, volatile=True)
-		# curr_obs_ex = Variable(curr_obs, volatile=True)
-		# action_ex = Variable(action, volatile=True)
-		# reward_ex = Variable(reward, volatile=True)
+		td_error = math.pow(1.0, prob_alpha)
 
-		#compute td-error for one sample
-		# td_error = ddqn_compute_td_error(batch_size=1, state_batch=current_state_ex, reward_batch=reward_ex, action_batch=action_ex, 
-		# 	next_state_batch=curr_obs_ex, model=model, target=target, gamma=gamma)
-
-		# td_error = torch.pow(1/(torch.abs(td_error)+1e-8), prob_alpha)
-		# exp_replay.push(current_state, action, reward, curr_obs, td_error)
-		# td_error = Tensor([1])
-		# td_error = torch.pow(torch.pow(torch.abs(td_error),-1), prob_alpha)
-		td_error = np.power(np.power(np.abs([1]), -1), prob_alpha)
-		new_exp = Experience(current_state, action, reward, curr_obs, td_error)
+		temp_exp = Experience(current_state, action, reward, curr_obs, td_error)
 		current_state = curr_obs
 
 		# compute y 
@@ -207,25 +171,23 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 
 			# start = time.time()
 
-			obs_samples, obs_ranks, obs_priorityVals = exp_replay.sample(batch_size-1, frames_count)
+			if frames_count%rp_size==0:
+				obs_samples, obs_ranks, obs_priorityVals = exp_replay.sample(batch_size-1, sort=True)
+			else:
+				obs_samples, obs_ranks, obs_priorityVals = exp_replay.sample(batch_size-1, sort=False)
 
-			obs_samples.append(new_exp)
-			obs_priorityVals[-1] = td_error.data[0]
+			obs_samples.append(temp_exp)
+			obs_priorityVals.append(td_error)
 
-
-			num_samples_per_batch = len(obs_samples)
-			# obs_priorityTensor = torch.from_numpy(np.array(obs_priorityVals))
-			p_batch = torch.pow(obs_priorityVals,-1)
-			w_batch = (1/exp_replay.getReplayCapacity() * p_batch)**beta
-			max_weight = torch.max(w_batch)
-			w_batch_normalize = torch.div(w_batch, max_weight).type(Tensor)
+			obs_pVals_tensor = torch.from_numpy(np.array(obs_priorityVals))
+			IS_weights = torch.pow((obs_pVals_tensor * rp_size), -beta)
+			IS_weights_norm = torch.div(IS_weights, torch.max(IS_weights)).type(Tensor)
 
 			batch = Experience(*zip(*obs_samples))
-			loss, new_weights = ddqn_compute_y(batch, num_samples_per_batch, model, target, gamma, w_batch_normalize, wLoss_func)
-			new_weights = torch.pow(torch.pow((torch.abs(torch.add(new_weights,1e-8))),-1), prob_alpha)
-			exp_replay.update(obs_ranks, new_weights)
-			exp_replay.push(new_exp.state, new_exp.action, new_exp.reward, new_exp.next_state, new_weights[-1].data.cpu().numpy())
-
+			loss, new_weights = ddqn_compute_y(batch, batch_size, model, target, gamma, IS_weights_norm, wLoss_func)
+			new_weights = torch.pow(new_weights, prob_alpha)
+			new_exp = Experience(temp_exp.state, temp_exp.action, temp_exp.reward, temp_exp.next_state, new_weights[batch_size-1])
+			exp_replay.update(obs_ranks, new_weights, new_exp)
 			optimizer.zero_grad()
 			loss.backward()
 		
