@@ -97,7 +97,7 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 	"""
 	
 	gym.undo_logger_setup()
-	logging.basicConfig(filename=envo+'_'+'ddqn_rank_training.log',level=logging.INFO)
+	logging.basicConfig(filename=envo+'_'+'ddqn_rank_unweighted_training.log',level=logging.INFO)
 	num_actions = env.action_space.n
 	env.reset()
 	
