@@ -74,8 +74,8 @@ def ddqn_compute_y(batch, batch_size, model, target, gamma, weights, lossFunc):
 	# loss = F.smooth_l1_loss(state_action_values, y_output, size_average=False)
 	loss = lossFunc(state_action_values, y_output, weights_var, reduce=False).squeeze()
 
-	wloss = torch.dot(loss, weights_var)
-	avgLoss = wloss.mean()
+	# wloss = torch.dot(loss, weights_var)
+	avgLoss = loss.mean()
 
 	# loss.data.clamp_(-1,1)
 	td_error = torch.abs(loss.data)
