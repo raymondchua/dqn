@@ -77,7 +77,7 @@ def ddqn_compute_y(batch, batch_size, model, target, gamma, weights, lossFunc):
 	wloss = torch.dot(loss, weights_var)
 	avgLoss = wloss.mean()
 
-	loss.data.clamp_(-1,1)
+	# loss.data.clamp_(-1,1)
 	td_error = torch.abs(loss.data)
 	td_error = td_error + 1e-8
 	
@@ -97,7 +97,7 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 	"""
 	
 	gym.undo_logger_setup()
-	logging.basicConfig(filename=envo+'_'+'ddqn_rank_uniform_training.log',level=logging.INFO)
+	logging.basicConfig(filename=envo+'_'+'ddqn_rank_training.log',level=logging.INFO)
 	num_actions = env.action_space.n
 	env.reset()
 	
