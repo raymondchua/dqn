@@ -5,7 +5,7 @@ import random
 import numpy as np
 from collections import namedtuple
 import time
-
+import bisect
 import torch
 
 Experience = namedtuple('Experience', ('state', 'action', 'reward','next_state', 'td_error'))
@@ -25,7 +25,6 @@ class RankBasedPrioritizedReplay(object):
 	def __init__(self, N):
 		self.capacity = N
 		self.memory = []
-		self.priorityWeights = torch.zeros(self.capacity)
 		self.position = 0
 
 
@@ -46,6 +45,8 @@ class RankBasedPrioritizedReplay(object):
 	
 	def getKey(self, item):
 		return item.td_error
+
+
 
 	def sample(self, batch_size, sort=False):
 		"""
@@ -70,16 +71,13 @@ class RankBasedPrioritizedReplay(object):
 			else:
 				end = len(self.memory)
 
-
-
 			choice = random.randint(start, end-1)
-			
 
 			curr_sample = self.memory[choice]
 
 			#shift index by 1 since choice starts from 0
 			segment_pvals = sum(range(start+1, end+1))
-			prob_sample = choice+1/segment_pvals
+			prob_sample = (choice+1)/segment_pvals
 
 			samples_list.append(curr_sample)
 			priority_list.append(prob_sample)

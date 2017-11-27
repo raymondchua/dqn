@@ -74,8 +74,8 @@ def ddqn_compute_y(batch, batch_size, model, target, gamma, weights, lossFunc):
 	# loss = F.smooth_l1_loss(state_action_values, y_output, size_average=False)
 	loss = lossFunc(state_action_values, y_output, weights_var, reduce=False).squeeze()
 
-	# wloss = torch.dot(loss, weights_var)
-	avgLoss = loss.mean()
+	wloss = torch.dot(loss, weights_var)
+	avgLoss = wloss.mean()
 
 	# loss.data.clamp_(-1,1)
 	td_error = torch.abs(loss.data)
@@ -97,7 +97,7 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 	"""
 	
 	gym.undo_logger_setup()
-	logging.basicConfig(filename=envo+'_'+'ddqn_rank_unweighted_training.log',level=logging.INFO)
+	logging.basicConfig(filename=envo+'_'+'ddqn_rank_weighted_training.log',level=logging.INFO)
 	num_actions = env.action_space.n
 	env.reset()
 	
@@ -169,7 +169,7 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 		if len(exp_replay) >= batch_size:
 			# Get batch samples
 
-			# start = time.time()
+			start = time.time()
 
 			if frames_count%rp_size==0:
 				obs_samples, obs_ranks, obs_priorityVals = exp_replay.sample(batch_size-1, sort=True)
@@ -182,6 +182,7 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 			obs_pVals_tensor = torch.from_numpy(np.array(obs_priorityVals))
 			IS_weights = torch.pow((obs_pVals_tensor * rp_size), -beta)
 			IS_weights_norm = torch.div(IS_weights, torch.max(IS_weights)).type(Tensor)
+			IS_weights_norm[-1] = torch.max(IS_weights_norm)
 
 			batch = Experience(*zip(*obs_samples))
 			loss, new_weights = ddqn_compute_y(batch, batch_size, model, target, gamma, IS_weights_norm, wLoss_func)
@@ -190,10 +191,6 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 			exp_replay.update(obs_ranks, new_weights, new_exp)
 			optimizer.zero_grad()
 			loss.backward()
-		
-
-			# for param in model.parameters():
-			# 	param.grad.data.clamp_(-1,1)
 
 			optimizer.step()
 			loss_per_epoch.append(loss.data.cpu().numpy()[0])
@@ -203,11 +200,11 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 
 
 
-		# end = time.time()
+		end = time.time()
 
-		# duration = end-start
+		duration = end-start
 
-		# print('duration : ', duration)
+		print('duration : ', duration)
 
 		if done:
 			# print('Game: ', rewards_per_episode)
