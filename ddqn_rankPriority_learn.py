@@ -169,7 +169,7 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 		if len(exp_replay) >= batch_size:
 			# Get batch samples
 
-			start = time.time()
+			# start = time.time()
 
 			if frames_count%rp_size==0:
 				obs_samples, obs_ranks, obs_priorityVals = exp_replay.sample(batch_size-1, sort=True)
@@ -200,11 +200,11 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 
 
 
-		end = time.time()
+		# end = time.time()
 
-		duration = end-start
+		# duration = end-start
 
-		print('duration : ', duration)
+		# print('duration : ', duration)
 
 		if done:
 			# print('Game: ', rewards_per_episode)
