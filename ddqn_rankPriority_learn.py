@@ -191,6 +191,8 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 			IS_weights_norm = torch.div(IS_weights, max_weight).type(Tensor)
 			IS_weights_norm[-1] = torch.max(IS_weights_norm)
 
+			print("Norm W(i): ", IS_weights_norm)
+
 			batch = Experience(*zip(*obs_samples))
 			loss, new_weights = ddqn_compute_y(batch, batch_size, model, target, gamma, IS_weights_norm, wLoss_func)
 			new_weights = torch.pow(new_weights, prob_alpha)
