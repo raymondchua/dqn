@@ -215,7 +215,7 @@ def initialize_rank_replay(env, rp_start, rp_size, frames_per_state,
 		action = LongTensor([[random.randrange(num_actions)]])
 		curr_obs, reward, done, _ = play_game(env, frames_per_state, action[0][0])
 		reward = Tensor([[reward]])
-		td_error = math.pow(1.0, prob_alpha)
+		td_error = 1
 		exp_replay.push(current_state, action, reward, curr_obs, td_error)
 
 		# current_state_ex = curr_obs_ex

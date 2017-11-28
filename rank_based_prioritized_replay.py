@@ -48,7 +48,7 @@ class RankBasedPrioritizedReplay(object):
 
 
 
-	def sample(self, batch_size, sort=False):
+	def sample(self, batch_size, alpha, sort=False):
 		"""
 		Extract sample from the replay memory.
 		"""
@@ -56,6 +56,11 @@ class RankBasedPrioritizedReplay(object):
 		rank_list = []
 		priority_list = []
 
+		segment_range = list(range(1, len(self.memory)))
+		segment_pvals = [1/x for x in segment_range]
+		segment_pvals_sum = sum(segment_pvals)
+
+		
 		if sort:
 			sorted(self.memory, key=self.getKey, reverse=True)
 
@@ -76,8 +81,13 @@ class RankBasedPrioritizedReplay(object):
 			curr_sample = self.memory[choice]
 
 			#shift index by 1 since choice starts from 0
-			segment_pvals = sum(range(start+1, end+1))
-			prob_sample = (choice+1)/segment_pvals
+			# print(len(self.memory))
+			# segment_range = list(range(start+1, end+1))
+			# segment_pvals = [1/x for x in segment_range]
+			# segment_pvals_sum = sum(segment_pvals)
+			p_i = math.pow(1/(choice+1), alpha)
+			p_k = math.pow(segment_pvals_sum, alpha)
+			prob_sample = p_i/p_k
 
 			samples_list.append(curr_sample)
 			priority_list.append(prob_sample)

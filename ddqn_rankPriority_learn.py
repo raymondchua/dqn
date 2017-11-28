@@ -72,7 +72,10 @@ def ddqn_compute_y(batch, batch_size, model, target, gamma, weights, lossFunc):
 	weights_var = Variable(weights)
 	# loss, td_error = lossFunc(state_action_values, y_output, weights_var)
 	# loss = F.smooth_l1_loss(state_action_values, y_output, size_average=False)
-	loss = lossFunc(state_action_values, y_output, weights_var, reduce=False).squeeze()
+	# loss = lossFunc(state_action_values, y_output, weights_var, reduce=False).squeeze()
+
+	loss = torch.squeeze(y_output - state_action_values)
+	loss = torch.clamp(loss, -1, 1)
 
 	wloss = torch.dot(loss, weights_var)
 	avgLoss = wloss.mean()
@@ -160,7 +163,7 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 
 		rewards_per_episode += reward
 		reward = Tensor([[reward]])
-		td_error = math.pow(1.0, prob_alpha)
+		td_error = 1
 
 		temp_exp = Experience(current_state, action, reward, curr_obs, td_error)
 		current_state = curr_obs
@@ -172,16 +175,17 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 			# start = time.time()
 
 			if frames_count%rp_size==0:
-				obs_samples, obs_ranks, obs_priorityVals = exp_replay.sample(batch_size-1, sort=True)
+				obs_samples, obs_ranks, obs_priorityVals = exp_replay.sample(batch_size-1, prob_alpha ,sort=True)
 			else:
-				obs_samples, obs_ranks, obs_priorityVals = exp_replay.sample(batch_size-1, sort=False)
+				obs_samples, obs_ranks, obs_priorityVals = exp_replay.sample(batch_size-1, prob_alpha, sort=False)
 
 			obs_samples.append(temp_exp)
 			obs_priorityVals.append(td_error)
 
 			obs_pVals_tensor = torch.from_numpy(np.array(obs_priorityVals))
 			IS_weights = torch.pow((obs_pVals_tensor * rp_size), -beta)
-			IS_weights_norm = torch.div(IS_weights, torch.max(IS_weights)).type(Tensor)
+			max_weight = torch.max(IS_weights)
+			IS_weights_norm = torch.div(IS_weights, max_weight).type(Tensor)
 			IS_weights_norm[-1] = torch.max(IS_weights_norm)
 
 			batch = Experience(*zip(*obs_samples))
