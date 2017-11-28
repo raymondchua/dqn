@@ -183,8 +183,11 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 			obs_priorityVals.append(td_error)
 
 			obs_pVals_tensor = torch.from_numpy(np.array(obs_priorityVals))
+			print("P(i): ", obs_pVals_tensor)
 			IS_weights = torch.pow((obs_pVals_tensor * rp_size), -beta)
 			max_weight = torch.max(IS_weights)
+
+			print("W(i): ", IS_weights)
 			IS_weights_norm = torch.div(IS_weights, max_weight).type(Tensor)
 			IS_weights_norm[-1] = torch.max(IS_weights_norm)
 
