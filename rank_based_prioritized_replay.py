@@ -39,7 +39,6 @@ class RankBasedPrioritizedReplay(object):
 			self.position = (self.position + 1) % (self.capacity)
 			
 		else:
-		
 			self.memory[self.position] = Experience(state, action, reward, next_state, td_error)
 			self.position = (self.position + 1) % (self.capacity)
 	
@@ -62,63 +61,52 @@ class RankBasedPrioritizedReplay(object):
 
 		
 		if sort:
-			sorted(self.memory, key=self.getKey, reverse=True)
+			sorted(self.memory, key=self.getKey)
 
-		if len(self.memory) < self.capacity:
-			index = np.linspace(0, len(self.memory)-1, batch_size, endpoint=True, dtype=int)
+		# if len(self.memory) < self.capacity:
+		# 	index = np.linspace(0, len(self.memory)-1, batch_size, endpoint=True, dtype=int)
 
-		for i in range(len(index)):
+		for i in range(batch_size):
 			
-			start = index[i]
+			# start = index[i]
 
-			if i < len(index)-1:
-				end = index[i+1]
-			else:
-				end = len(self.memory)
+			# if i < len(index)-1:
+			# 	end = index[i+1]
+			# else:
+			# 	end = len(self.memory)
 
-			choice = random.randint(start, end-1)
+			# choice = random.randint(start, end-1)
 
+			# curr_sample = self.memory[choice]
+
+			choice = i*-1
 			curr_sample = self.memory[choice]
-
-			#shift index by 1 since choice starts from 0
-			# print(len(self.memory))
-			# segment_range = list(range(start+1, end+1))
-			# segment_pvals = [1/x for x in segment_range]
-			# segment_pvals_sum = sum(segment_pvals)
-			p_i = math.pow(1/(choice+1), alpha)
+			p_i = math.pow(1/(i+1), alpha)
 			p_k = math.pow(segment_pvals_sum, alpha)
 			prob_sample = p_i/p_k
 
 			samples_list.append(curr_sample)
 			priority_list.append(prob_sample)
-			rank_list.append(choice)
+			# rank_list.append(choice)
 
-		return samples_list, rank_list, priority_list
+		return samples_list, priority_list
 
-	def update(self, index, loss, new_sample):
+	def update(self, old_samples, loss, new_sample):
 		"""
 		update the samples new td values
 		"""
-
-		new_td = new_sample.td_error
-		insertNew = False
-
-		for i in range(len(index)):
-			indexVal = index[i]
+		for i in range(len(old_samples)):
+			curr_sample = old_samples[i]
 			curr_loss = loss[i]
+			# print(len(self.memory))
+			# print(self.position)
+			# self.push(curr_sample.state, curr_sample.action, curr_sample.reward, curr_sample.next_state, curr_loss)
+			choice = i * -1
+			self.memory[choice] = Experience(curr_sample.state, curr_sample.action, curr_sample.reward, curr_sample.next_state, curr_loss)
 
-			if curr_loss < new_td and not insertNew:
-				insertNew = True
-				self.memory[indexVal] = new_sample
-
-			elif i == len(index)-1 and not insertNew:
-				insertNew = True
-				self.memory[indexVal] = new_sample
-
-			else:
-				curr_sample = self.memory[indexVal]
-				self.memory[indexVal] = Experience(curr_sample.state, curr_sample.action, curr_sample.reward, curr_sample.next_state, curr_loss)
-
+		print(len(self.memory))
+		#insert the new sample
+		self.push(new_sample.state, new_sample.action, new_sample.reward, new_sample.next_state, new_sample.td_error)
 
 	def __len__(self):
 		return len(self.memory)

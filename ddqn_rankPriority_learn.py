@@ -75,7 +75,7 @@ def ddqn_compute_y(batch, batch_size, model, target, gamma, weights, lossFunc):
 	# loss = lossFunc(state_action_values, y_output, weights_var, reduce=False).squeeze()
 
 	loss = torch.squeeze(y_output - state_action_values)
-	loss = torch.clamp(loss, -1, 1)
+	# loss = torch.clamp(loss, -1, 1)
 
 	wloss = torch.dot(loss, weights_var)
 	avgLoss = wloss.mean()
@@ -175,32 +175,31 @@ def ddqn_rank_train(env, exploreScheduler, betaScheduler, optimizer_constructor,
 			# start = time.time()
 
 			if frames_count%rp_size==0:
-				obs_samples, obs_ranks, obs_priorityVals = exp_replay.sample(batch_size-1, prob_alpha ,sort=True)
+				obs_samples, obs_priorityVals = exp_replay.sample(batch_size-1, prob_alpha ,sort=True)
 			else:
-				obs_samples, obs_ranks, obs_priorityVals = exp_replay.sample(batch_size-1, prob_alpha, sort=False)
+				obs_samples, obs_priorityVals = exp_replay.sample(batch_size-1, prob_alpha, sort=False)
 
 			obs_samples.append(temp_exp)
 			obs_priorityVals.append(td_error)
 
 			obs_pVals_tensor = torch.from_numpy(np.array(obs_priorityVals))
-			print("P(i): ", obs_pVals_tensor)
+			# print("P(i): ", obs_pVals_tensor)
 			IS_weights = torch.pow((obs_pVals_tensor * rp_size), -beta)
 			max_weight = torch.max(IS_weights)
 
-			print("W(i): ", IS_weights)
 			IS_weights_norm = torch.div(IS_weights, max_weight).type(Tensor)
 			IS_weights_norm[-1] = torch.max(IS_weights_norm)
 
-			print("Norm W(i): ", IS_weights_norm)
+			# print("Norm W(i): ", IS_weights_norm)
 
 			batch = Experience(*zip(*obs_samples))
 			loss, new_weights = ddqn_compute_y(batch, batch_size, model, target, gamma, IS_weights_norm, wLoss_func)
 			new_weights = torch.pow(new_weights, prob_alpha)
 			new_exp = Experience(temp_exp.state, temp_exp.action, temp_exp.reward, temp_exp.next_state, new_weights[batch_size-1])
-			exp_replay.update(obs_ranks, new_weights, new_exp)
+			exp_replay.update(obs_samples, new_weights, new_exp)
 			optimizer.zero_grad()
 			loss.backward()
-
+			# print("loss: ", loss.data)
 			optimizer.step()
 			loss_per_epoch.append(loss.data.cpu().numpy()[0])
 
