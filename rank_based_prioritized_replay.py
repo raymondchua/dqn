@@ -104,7 +104,6 @@ class RankBasedPrioritizedReplay(object):
 			choice = i * -1
 			self.memory[choice] = Experience(curr_sample.state, curr_sample.action, curr_sample.reward, curr_sample.next_state, curr_loss)
 
-		print(len(self.memory))
 		#insert the new sample
 		self.push(new_sample.state, new_sample.action, new_sample.reward, new_sample.next_state, new_sample.td_error)
 
